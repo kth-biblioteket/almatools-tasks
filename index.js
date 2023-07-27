@@ -699,13 +699,13 @@ cron.schedule(process.env.CRON_TDIG, () => {
     }
 });
 
-const job = nodecron.schedule(process.env.CRON_PBOOKS, () => {
+const job = cron.schedule(process.env.CRON_PBOOKS, () => {
 	console.log(new Date().toLocaleString());
 	console.log("Cron Pbooks job started");
 	createnewbooksrecords('P');	
 });
 
-const job2 = nodecron.schedule(process.env.CRON_EBOOKS, () => {
+const job2 = cron.schedule(process.env.CRON_EBOOKS, () => {
 	console.log(new Date().toLocaleString());
 	console.log("Cron Ebooks job started");
 	createnewbooksrecords('E');	
