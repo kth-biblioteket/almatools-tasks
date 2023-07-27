@@ -1,5 +1,3 @@
-"use strict";
-
 require('dotenv').config({path:'almatools-tasks.env'})
 const fs = require('fs');
 const cron = require('node-cron');
@@ -164,6 +162,7 @@ const deleteBooks = (booktype, con) => {
 };
 
 function addgooglecover(records, index, booktype, con, google_tries) {
+    let sql
 	var thumbnail = "";
 	thumbnail =	records[index].thumbnail;
 	var coverURL = "";
@@ -318,6 +317,7 @@ function callalmaanalytics_E(endpoint, latestactivationdate, token, nrofprocesse
 	var subject;
 	var category;
 	var subcategory;
+    let publicationdate
 
 	var endpoint
 	endpoint = process.env.ALMA_ANALYTICS_API_ENDPOINT_EBOOKS + 
