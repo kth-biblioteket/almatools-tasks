@@ -1,0 +1,8 @@
+node_modules
+*.log
+*.env
+*.log.*
+*.csv
+*.txt
+*.zip
+test.js
