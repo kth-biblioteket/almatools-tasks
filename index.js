@@ -555,9 +555,10 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 }
 
 async function createnewbooksrecords(booktype) {
-	var latestactivationdate
+	let latestactivationdate
+    let currentdate
 	//DB Connect
-	var con = mysql.createConnection({
+	let con = mysql.createConnection({
 		host: process.env.DATABASEHOST,
 		user: process.env.DB_USER,
 		password: process.env.DB_PASSWORD,
