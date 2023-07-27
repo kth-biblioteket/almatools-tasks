@@ -1,6 +1,14 @@
 # KTH Biblioteket Alma Tasks
+- Skicka TDIG till Libris, Skörda nya böcker etc
 
-## Skicka TDIG till Libris, Skörda nya böcker etc
+##
+
+###
+
+
+#### Dependencies
+
+Node 16.13.2
 
 ### Install
 Skapa docker-compose.yml
