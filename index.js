@@ -18,59 +18,17 @@ var mysql = require('mysql')
 var primoxserviceendpoint = process.env.PRIMO_XSERVICE_ENDPOINT;
 
 
-async function runAlma(config) {
+async function runAlma(jobpath, payload) {
 
     try {  
-        almapiurl = process.env.ALMA_API_ENDPOINT + config.path + '&apikey=' + process.env.ALMA_APIKEY
-        const almaresponse = await axios.put(almapiurl, data, )
-        res.json(almaresponse);
+        almapiurl = process.env.ALMA_API_ENDPOINT + jobpath + '?op=run&apikey=' + process.env.ALMA_APIKEY
+		console.log(almapiurl)
+        const almaresponse = await axios.post(almapiurl, payload )
+        console.log(almaresponse.data);
     } catch(err) {
-        res.status(400)
-        res.json(err.message)
+        console.log(err.message)
     }
-    
-    
-}
-
-async function sendFileToFtp(config) {
-    try {  
-        console.log("Zipping file...")
-        const zipStream = fs.createWriteStream(config.zip_file);
-        const zipArchive = archiver('zip');
-        zipArchive.pipe(zipStream);
-        const files = fs.readdirSync('./');
-        for (const file of files) {
-            if (path.extname(file) === '.txt') {
-                const filePath = path.join('./', file);
-                zipArchive.append(fs.createReadStream(filePath), { name: file });
-            }
-        }
-        let zipresult = await zipArchive.finalize();
-        console.log("Zipping finished...")
-
-        console.log("Starting ftp...")
-        const client = new ftp.Client();
-
-        const filePath = config.zip_file;
-        const remoteFilePath = config.zip_file;
-        try {
-            await client.access({
-                host: config.ftp_server,
-                port: 21,
-                user: config.ftp_user,
-                password: config.ftp_password
-            });
-        
-            await client.uploadFrom(filePath, remoteFilePath);
-            console.log('File uploaded successfully');
-        } catch (err) {
-            console.error('FTP error:', err);
-        } finally {
-            client.close();
-        }
-    } catch(err) {
-        console.log(err)
-    }
+       
 }
 
 async function sendMail(mail_to, lang) {
@@ -613,114 +571,97 @@ async function createnewbooksrecords(booktype) {
 
 }
 
-cron.schedule(process.env.CRON_TDIG, () => {
-    // TDIG till Libris
-    config = {
-        "start_time": "18:00:00",
-        "interval": "daily",
-        "weekday": "",
-        "path": "conf/jobs/M47",
-        "parameter": [
-            {
-                "name": {
-                    "value": "task_ExportBibParams_outputFormat_string",
-                    "desc": null
-                },
-                "value": "TXT"
-            },
-            {
-                "name": {
-                    "value": "task_ExportBibParams_maxSize_string",
-                    "desc": null
-                },
-                "value": "0"
-            },
-            {
-                "name": {
-                    "value": "task_ExportBibParams_exportFolder_string",
-                    "desc": null
-                },
-                "value": "INSTITUTION"
-            },
-            {
-                "name": {
-                    "value": "task_ExportParams_ftpConfig_string",
-                    "desc": null
-                },
-                "value": "5495297000002456"
-            },
-            {
-                "name": {
-                    "value": "task_ExportParams_ftpSubdirectory_string",
-                    "desc": null
-                },
-                "value": "tdig"
-            },
-            {
-                "name": {
-                    "value": "task_ExportParams_interfaceName",
-                    "desc": null
-                },
-                "value": "false"
-            },
-            {
-                "name": {
-                    "value": "task_ExportParams_filterInactivePortfolios",
-                    "desc": null
-                },
-                "value": "false"
-            },
-            {
-                "name": {
-                    "value": "task_ExportParams_baseUrl",
-                    "desc": null
-                },
-                "value": "http://pmt-eu.hosted.exlibrisgroup.com/openurl/46KTH/46KTH_services_page?"
-            },
-            {
-                "name": {
-                    "value": "set_id",
-                    "desc": null
-                },
-                "value": "2036151600002456"
-            },
-            {
-                "name": {
-                    "value": "job_name",
-                    "desc": null
-                },
-                "value": "Export Electronic Portfolios - via API - Portfolios export Tdig"
-            }
-        ],
-        "ftp_server": process.env.FTP_SERVER_LIBRIS,
-        "ftp_user": process.env.FTP_USER_LIBRIS,
-        "ftp_password": process.env.FTP_PASSWORD_LIBRIS,
-        "zip_file": process.env.ZIP_FILE,
-        "txt_file": "Tdig_full_export.txt"
-    }
-});
-
-const job = cron.schedule(process.env.CRON_PBOOKS, () => {
+const pbooks = cron.schedule(process.env.CRON_PBOOKS, () => {
 	console.log(new Date().toLocaleString());
 	console.log("Cron Pbooks job started");
 	createnewbooksrecords('P');	
 });
 
-const job2 = cron.schedule(process.env.CRON_EBOOKS, () => {
+const ebooks = cron.schedule(process.env.CRON_EBOOKS, () => {
 	console.log(new Date().toLocaleString());
 	console.log("Cron Ebooks job started");
 	createnewbooksrecords('E');	
 });
 
-/*
-sendFileToFtp({
-    "ftp_server": process.env.FTP_SERVER_LIBRIS,
-    "ftp_user": process.env.FTP_USER_LIBRIS,
-    "ftp_password": process.env.FTP_PASSWORD_LIBRIS,
-    "zip_file": process.env.ZIP_FILE,
-    "txt_file": "Tdig_full_export.txt"
-})
-*/
+const alma_tdig = cron.schedule(process.env.CRON_TDIG, () => {
+	let payload = {
+		"parameter": [
+			{
+				"name": {
+					"value": "task_ExportBibParams_outputFormat_string",
+					"desc": null
+				},
+				"value": "TXT"
+			},
+			{
+				"name": {
+					"value": "task_ExportBibParams_maxSize_string",
+					"desc": null
+				},
+				"value": "0"
+			},
+			{
+				"name": {
+					"value": "task_ExportBibParams_exportFolder_string",
+					"desc": null
+				},
+				"value": "INSTITUTION"
+			},
+			{
+				"name": {
+					"value": "task_ExportParams_ftpConfig_string",
+					"desc": null
+				},
+				"value": "28187006240002456"
+			},
+			{
+				"name": {
+					"value": "task_ExportParams_ftpSubdirectory_string",
+					"desc": null
+				},
+				"value": "tdig"
+			},
+			{
+				"name": {
+					"value": "task_ExportParams_interfaceName",
+					"desc": null
+				},
+				"value": "false"
+			},
+			{
+				"name": {
+					"value": "task_ExportParams_filterInactivePortfolios",
+					"desc": null
+				},
+				"value": "false"
+			},
+			{
+				"name": {
+					"value": "task_ExportParams_baseUrl",
+					"desc": null
+				},
+				"value": "http://pmt-eu.hosted.exlibrisgroup.com/openurl/46KTH/46KTH_services_page?"
+			},
+			{
+				"name": {
+					"value": "set_id",
+					"desc": null
+				},
+				"value": "2036151600002456"
+			},
+			{
+				"name": {
+					"value": "job_name",
+					"desc": null
+				},
+				"value": "Export Electronic Portfolios - via API - Portfolios export Tdig"
+			}
+		]
+	}
+	console.log(new Date().toLocaleString());
+	console.log("Alma Tdig Started");
+	runAlma(process.env.ALMA_TDIG_JOB_PATH, payload);	
+});
 
 function addZero(i) {
     if (i < 10) {
