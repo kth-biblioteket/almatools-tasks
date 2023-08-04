@@ -22,7 +22,6 @@ async function runAlma(jobpath, payload) {
 
     try {  
         almapiurl = process.env.ALMA_API_ENDPOINT + jobpath + '?op=run&apikey=' + process.env.ALMA_APIKEY
-		console.log(almapiurl)
         const almaresponse = await axios.post(almapiurl, payload )
         console.log(almaresponse.data);
     } catch(err) {
@@ -619,7 +618,7 @@ const alma_tdig = cron.schedule(process.env.CRON_TDIG, () => {
 					"value": "task_ExportParams_ftpSubdirectory_string",
 					"desc": null
 				},
-				"value": "tdig"
+				"value": ""
 			},
 			{
 				"name": {
