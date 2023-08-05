@@ -207,60 +207,65 @@ function callprimoxservice(records,index, booktype, con) {
 	var endpoint = primoxserviceendpoint + '?json=true&institution=46KTH&onCampus=true&query=addsrcrid,exact,' + records[index].mmsid + '&indx=1&bulkSize=10&loc=local,scope:(46KTH)&loc=adaptor,primo_central_multiple_fe';	
 	axios.get(endpoint)
 		.then(response => {
-			if(typeof response.data.SEGMENTS.JAGROOT.RESULT.DOCSET.DOC !== 'undefined') {
-				var isbnprimo = "";
-				if(typeof response.data.SEGMENTS.JAGROOT.RESULT.DOCSET.DOC.PrimoNMBib.record.search.isbn !== 'undefined') {
-					if(booktype == "E") {
-						isbnprimo = response.data.SEGMENTS.JAGROOT.RESULT.DOCSET.DOC.PrimoNMBib.record.search.isbn[0];
-					} else {
-						isbnprimo = records[index].isbn
+			try {
+				if(typeof response.data.SEGMENTS.JAGROOT.RESULT.DOCSET.DOC !== 'undefined') {
+					var isbnprimo = "";
+					if(typeof response.data.SEGMENTS.JAGROOT.RESULT.DOCSET.DOC.PrimoNMBib.record.search.isbn !== 'undefined') {
+						if(booktype == "E") {
+							isbnprimo = response.data.SEGMENTS.JAGROOT.RESULT.DOCSET.DOC.PrimoNMBib.record.search.isbn[0];
+						} else {
+							isbnprimo = records[index].isbn
+						}
 					}
-				}
-				var thumbnail = "";
-				if(typeof response.data.SEGMENTS.JAGROOT.RESULT.DOCSET.DOC.LINKS.thumbnail !== 'undefined') {
-					thumbnail = response.data.SEGMENTS.JAGROOT.RESULT.DOCSET.DOC.LINKS.thumbnail[1];
-				}
-				sql = "UPDATE newbooks SET recordid = '" + response.data.SEGMENTS.JAGROOT.RESULT.DOCSET.DOC.PrimoNMBib.record.control.recordid + 
-					"' ,isbnprimo = '" + isbnprimo + 
-					"' ,thumbnail = '" + thumbnail + 
-					"' WHERE mmsid = '" + records[index].mmsid + "'";
-				con.query(sql)
-			} else {
-				fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "recordid saknas, mmsid: " + records[index].mmsid + "...\n", function (err) {
-					if (err) throw err;
-				});
-				console.log("recordid saknas, mmsid: " + records[index].mmsid);
-				console.log(JSON.stringify(response.data, null, 2));
-				console.log(endpoint);
-			}
-			index++;
-			if (index < records.length){
-				//modulo
-				if( index % 50 == 0 ){
-					currentdate = new Date();
-					fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "Harvest, primoupdate index: " + index + "...\n", function (err) {
+					var thumbnail = "";
+					if(typeof response.data.SEGMENTS.JAGROOT.RESULT.DOCSET.DOC.LINKS.thumbnail !== 'undefined') {
+						thumbnail = response.data.SEGMENTS.JAGROOT.RESULT.DOCSET.DOC.LINKS.thumbnail[1];
+					}
+					sql = "UPDATE newbooks SET recordid = '" + response.data.SEGMENTS.JAGROOT.RESULT.DOCSET.DOC.PrimoNMBib.record.control.recordid + 
+						"' ,isbnprimo = '" + isbnprimo + 
+						"' ,thumbnail = '" + thumbnail + 
+						"' WHERE mmsid = '" + records[index].mmsid + "'";
+					con.query(sql)
+				} else {
+					fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "recordid saknas, mmsid: " + records[index].mmsid + "...\n", function (err) {
 						if (err) throw err;
 					});
-					console.log("index: " + index + "...");
+					console.log("recordid saknas, mmsid: " + records[index].mmsid);
+					console.log(JSON.stringify(response.data, null, 2));
+					console.log(endpoint);
 				}
-				callprimoxservice(records,index, booktype, con);
-			} else {
-				currentdate = new Date();
-				fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, primox finished \n", function (err) {
-					if (err) throw err;
-				});
-				console.log("primox finished");
-				con.query("SELECT * FROM newbooks where booktype = '" + booktype + "' AND thumbnail != '' AND thumbnail != 'no_cover' and thumbnail != 'o'", function (error, result, fields) {
-					if (error) {
+				index++;
+				if (index < records.length){
+					//modulo
+					if( index % 50 == 0 ){
 						currentdate = new Date();
-						fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, error selecting " + error + "\n", function (err) {
+						fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "Harvest, primoupdate index: " + index + "...\n", function (err) {
 							if (err) throw err;
 						});
-					} else {
-						console.log(result.length)
-						addgooglecover(result, 0, booktype, con);
+						console.log("index: " + index + "...");
 					}
-				});
+					callprimoxservice(records,index, booktype, con);
+				} else {
+					currentdate = new Date();
+					fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, primox finished \n", function (err) {
+						if (err) throw err;
+					});
+					console.log("primox finished");
+					con.query("SELECT * FROM newbooks where booktype = '" + booktype + "' AND thumbnail != '' AND thumbnail != 'no_cover' and thumbnail != 'o'", function (error, result, fields) {
+						if (error) {
+							currentdate = new Date();
+							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, error selecting " + error + "\n", function (err) {
+								if (err) throw err;
+							});
+						} else {
+							console.log(result.length)
+							addgooglecover(result, 0, booktype, con);
+						}
+					});
+				}
+			} catch(err) {
+				console.log("Error calling primoxservice")
+				console.log(err)
 			}
 		})
 		.catch(error => {
@@ -297,101 +302,106 @@ function callalmaanalytics_E(endpoint, latestactivationdate, token, nrofprocesse
 
 		resp.on('end', () => {
 				parseString(data, function (err, result) {
-					if (typeof result.report.QueryResult !== 'undefined') {
-						mmsid = '';
-						isbn = '';
-						title = '';
-						activationdate = '';
-						dewey = '';
-						subject = '';
-						category = '';
-						subcategory = '';
-						publicationdate = '';
-						IsFinished = result.report.QueryResult[0].IsFinished[0];
-						if(typeof result.report.QueryResult[0].ResumptionToken !== 'undefined') {
-							token = result.report.QueryResult[0].ResumptionToken[0];
-						}
-						if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row !== 'undefined') {
-							for (index in result.report.QueryResult[0].ResultXml[0].rowset[0].Row) {
-								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column5 !== 'undefined') {
-									mmsid = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column5[0];
-								}
-								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column4 !== 'undefined') {
-									isbn = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column4[0].split(';')[0];
-								}
-								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column6 !== 'undefined') {
-									title = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column6[0];
-								}
-								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column10!== 'undefined') {
-									activationdate = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column10[0];
-								}
-								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column11!== 'undefined') {
-									publicationdate = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column11[0];
-								}
-								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column3 !== 'undefined') {
-									dewey = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column3[0];
-								}
-								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column7 !== 'undefined') {
-									if (result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column7 !== 'Unknown') {
-										subject = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column7[0];
-									}
-								}
-								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column8 !== 'undefined') {
-									if (result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column8 !== 'Unknown') {
-										category = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column8[0];
-									}
-								}
-								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column9 !== 'undefined') {
-									if (result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column9 !== 'Unknown') {
-										subcategory = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column9[0];
-									}
-								}
-								//samla alla inserts i array och gör bara ett anrop efter iterationen är färdig.
-								booksarray.push([mmsid, '', isbn, title, activationdate, publicationdate, dewey, subject, category, subcategory,'E']);
+					try {
+						if (typeof result.report.QueryResult !== 'undefined') {
+							mmsid = '';
+							isbn = '';
+							title = '';
+							activationdate = '';
+							dewey = '';
+							subject = '';
+							category = '';
+							subcategory = '';
+							publicationdate = '';
+							IsFinished = result.report.QueryResult[0].IsFinished[0];
+							if(typeof result.report.QueryResult[0].ResumptionToken !== 'undefined') {
+								token = result.report.QueryResult[0].ResumptionToken[0];
 							}
-							sql = "INSERT INTO newbooks(mmsid, recordid, isbn, title, activationdate, publicationdate, dewey, subject, category, subcategory, booktype) VALUES ?";
-							con.query(sql, [booksarray]);
-							currentdate = new Date();
-							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Inserted " + booksarray.length + " rows \n", function (err) {
-								if (err) throw err;
-							});
-							console.log("inserted " + booksarray.length + " rows");
-							nrofprocessedrecords = nrofprocessedrecords + booksarray.length;
-							console.log("nrofprocessedrecords " + nrofprocessedrecords);
-							//max xxx titlar
-							if(IsFinished == 'false' && nrofprocessedrecords < 10000) {
-								callalmaanalytics_E(endpoint, latestactivationdate, token,nrofprocessedrecords, con);
-							} else {
-								//Alla titlar hämtade och tillagda i tabellen newbooks
-								sql = `SELECT * FROM newbooks 
-										WHERE booktype = 'E'
-										AND activationdate > '${latestactivationdate}'
-										ORDER BY activationdate DESC 
-										LIMIT 500`
-								con.query(sql, function (error, result, fields) {
-									if (error) {
-										currentdate = new Date();
-										fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Error selecting " + error + "\n", function (err) {
-											if (err) throw err;
-										});
-									} else {
-										callprimoxservice(result, 0, 'E', con);
+							if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row !== 'undefined') {
+								for (index in result.report.QueryResult[0].ResultXml[0].rowset[0].Row) {
+									if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column5 !== 'undefined') {
+										mmsid = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column5[0];
 									}
+									if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column4 !== 'undefined') {
+										isbn = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column4[0].split(';')[0];
+									}
+									if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column6 !== 'undefined') {
+										title = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column6[0];
+									}
+									if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column10!== 'undefined') {
+										activationdate = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column10[0];
+									}
+									if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column11!== 'undefined') {
+										publicationdate = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column11[0];
+									}
+									if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column3 !== 'undefined') {
+										dewey = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column3[0];
+									}
+									if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column7 !== 'undefined') {
+										if (result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column7 !== 'Unknown') {
+											subject = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column7[0];
+										}
+									}
+									if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column8 !== 'undefined') {
+										if (result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column8 !== 'Unknown') {
+											category = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column8[0];
+										}
+									}
+									if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column9 !== 'undefined') {
+										if (result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column9 !== 'Unknown') {
+											subcategory = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column9[0];
+										}
+									}
+									//samla alla inserts i array och gör bara ett anrop efter iterationen är färdig.
+									booksarray.push([mmsid, '', isbn, title, activationdate, publicationdate, dewey, subject, category, subcategory,'E']);
+								}
+								sql = "INSERT INTO newbooks(mmsid, recordid, isbn, title, activationdate, publicationdate, dewey, subject, category, subcategory, booktype) VALUES ?";
+								con.query(sql, [booksarray]);
+								currentdate = new Date();
+								fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Inserted " + booksarray.length + " rows \n", function (err) {
+									if (err) throw err;
+								});
+								console.log("inserted " + booksarray.length + " rows");
+								nrofprocessedrecords = nrofprocessedrecords + booksarray.length;
+								console.log("nrofprocessedrecords " + nrofprocessedrecords);
+								//max xxx titlar
+								if(IsFinished == 'false' && nrofprocessedrecords < 10000) {
+									callalmaanalytics_E(endpoint, latestactivationdate, token,nrofprocessedrecords, con);
+								} else {
+									//Alla titlar hämtade och tillagda i tabellen newbooks
+									sql = `SELECT * FROM newbooks 
+											WHERE booktype = 'E'
+											AND activationdate > '${latestactivationdate}'
+											ORDER BY activationdate DESC 
+											LIMIT 500`
+									con.query(sql, function (error, result, fields) {
+										if (error) {
+											currentdate = new Date();
+											fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Error selecting " + error + "\n", function (err) {
+												if (err) throw err;
+											});
+										} else {
+											callprimoxservice(result, 0, 'E', con);
+										}
+									});
+								}
+							} else {
+								currentdate = new Date();
+								fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, No new books to harvest! \n", function (err) {
+									if (err) throw err;
+								});
+								fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Finished! \n", function (err) {
+									if (err) throw err;
+								});
+								console.log("No new books to harvest!");
+								con.rollback(function() {
 								});
 							}
-						} else {
-							currentdate = new Date();
-							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, No new books to harvest! \n", function (err) {
-								if (err) throw err;
-							});
-							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Finished! \n", function (err) {
-								if (err) throw err;
-							});
-							console.log("No new books to harvest!");
-							con.rollback(function() {
-							});
-						}
 
+						}
+					} catch(err) {
+						console.log("Error calling alma analytics E")
+						console.log(err)
 					}
 				});
 		});
@@ -428,86 +438,91 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 
 	resp.on('end', () => {
         	parseString(data, function (err, result) {
-				if (typeof result.report.QueryResult !== 'undefined') {
-					mmsid = '';
-					isbn = '';
-					title = '';
-					activationdate = '';
-					dewey = '';
-					subject = '';
-					category = '';
-					subcategory = '';
-					publicationdate = '';
-					IsFinished = result.report.QueryResult[0].IsFinished[0];
-					if(typeof result.report.QueryResult[0].ResumptionToken !== 'undefined') {
-						token = result.report.QueryResult[0].ResumptionToken[0];
-					}
-					if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row !== 'undefined') {
-						for (index in result.report.QueryResult[0].ResultXml[0].rowset[0].Row) {
-							if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column3 !== 'undefined') {
-								mmsid = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column3[0];
-							}
-							if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column2 !== 'undefined') {
-								isbn = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column2[0].split(';')[0];
-							}
-							if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column4 !== 'undefined') {
-								title = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column4[0];
-							}
-							if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column5!== 'undefined') {
-								activationdate = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column5[0];
-							}
-							if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column6!== 'undefined') {
-								publicationdate = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column6[0];
-							}
-							if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column1 !== 'undefined') {
-								dewey = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column1[0];
-							}
-							//samla alla inserts i array och gör bara ett anrop efter iterationen är färdig.
-							booksarray.push([mmsid, '', isbn, title, activationdate, publicationdate, dewey, '', '', '', 'P']);
+				try {
+					if (typeof result.report.QueryResult !== 'undefined') {
+						mmsid = '';
+						isbn = '';
+						title = '';
+						activationdate = '';
+						dewey = '';
+						subject = '';
+						category = '';
+						subcategory = '';
+						publicationdate = '';
+						IsFinished = result.report.QueryResult[0].IsFinished[0];
+						if(typeof result.report.QueryResult[0].ResumptionToken !== 'undefined') {
+							token = result.report.QueryResult[0].ResumptionToken[0];
 						}
-						sql = "INSERT INTO newbooks(mmsid, recordid, isbn, title, activationdate, publicationdate, dewey, subject, category, subcategory, booktype) VALUES ?";
-						con.query(sql, [booksarray]);
-						currentdate = new Date();
-						fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Inserted " + booksarray.length + " rows \n", function (err) {
-							if (err) throw err;
-						});
-						console.log("inserted " + booksarray.length + " rows");
-						nrofprocessedrecords = nrofprocessedrecords + booksarray.length;
-						console.log("nrofprocessedrecords " +nrofprocessedrecords);
-						//max xxx titlar
-						if(IsFinished == 'false' && nrofprocessedrecords < 500) {
-							callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocessedrecords, con);
-						} else {
-							//Alla titlar hämtade och tillagda i tabellen newbooks
-							sql = `SELECT * FROM newbooks 
-									WHERE booktype = 'P'
-									AND activationdate > '${latestactivationdate}'
-									ORDER BY activationdate DESC 
-									LIMIT 500`
-							con.query(sql, function (error, result, fields) {
-								if (error) {
-									currentdate = new Date();
-									fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Error selecting " + error + "\n", function (err) {
-										if (err) throw err;
-									});
-								} else {
-									callprimoxservice(result, 0, 'P', con);
+						if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row !== 'undefined') {
+							for (index in result.report.QueryResult[0].ResultXml[0].rowset[0].Row) {
+								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column3 !== 'undefined') {
+									mmsid = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column3[0];
 								}
+								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column2 !== 'undefined') {
+									isbn = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column2[0].split(';')[0];
+								}
+								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column4 !== 'undefined') {
+									title = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column4[0];
+								}
+								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column5!== 'undefined') {
+									activationdate = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column5[0];
+								}
+								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column6!== 'undefined') {
+									publicationdate = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column6[0];
+								}
+								if (typeof result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column1 !== 'undefined') {
+									dewey = result.report.QueryResult[0].ResultXml[0].rowset[0].Row[index].Column1[0];
+								}
+								//samla alla inserts i array och gör bara ett anrop efter iterationen är färdig.
+								booksarray.push([mmsid, '', isbn, title, activationdate, publicationdate, dewey, '', '', '', 'P']);
+							}
+							sql = "INSERT INTO newbooks(mmsid, recordid, isbn, title, activationdate, publicationdate, dewey, subject, category, subcategory, booktype) VALUES ?";
+							con.query(sql, [booksarray]);
+							currentdate = new Date();
+							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Inserted " + booksarray.length + " rows \n", function (err) {
+								if (err) throw err;
+							});
+							console.log("inserted " + booksarray.length + " rows");
+							nrofprocessedrecords = nrofprocessedrecords + booksarray.length;
+							console.log("nrofprocessedrecords " +nrofprocessedrecords);
+							//max xxx titlar
+							if(IsFinished == 'false' && nrofprocessedrecords < 500) {
+								callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocessedrecords, con);
+							} else {
+								//Alla titlar hämtade och tillagda i tabellen newbooks
+								sql = `SELECT * FROM newbooks 
+										WHERE booktype = 'P'
+										AND activationdate > '${latestactivationdate}'
+										ORDER BY activationdate DESC 
+										LIMIT 500`
+								con.query(sql, function (error, result, fields) {
+									if (error) {
+										currentdate = new Date();
+										fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Error selecting " + error + "\n", function (err) {
+											if (err) throw err;
+										});
+									} else {
+										callprimoxservice(result, 0, 'P', con);
+									}
+								});
+							}
+						} else {
+							currentdate = new Date();
+							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, No new books to harvest! \n", function (err) {
+								if (err) throw err;
+							});
+							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Finished! \n", function (err) {
+								if (err) throw err;
+							});
+							console.log("No new books to harvest!");
+							con.rollback(function() {
 							});
 						}
-					} else {
-						currentdate = new Date();
-						fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, No new books to harvest! \n", function (err) {
-							if (err) throw err;
-						});
-						fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Finished! \n", function (err) {
-							if (err) throw err;
-						});
-						console.log("No new books to harvest!");
-						con.rollback(function() {
-						});
-					}
 
+					}
+				} catch(err) {
+					console.log("Error calling alma analytics P")
+					console.log(err)
 				}
 			});
 	});
@@ -517,61 +532,66 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 }
 
 async function createnewbooksrecords(booktype) {
-	let latestactivationdate
-    let currentdate
-	//DB Connect
-	let con = mysql.createConnection({
-		host: process.env.DATABASEHOST,
-		user: process.env.DB_USER,
-		password: process.env.DB_PASSWORD,
-		database: process.env.DB_DATABASE
-	});
+	try {
+		let latestactivationdate
+		let currentdate
+	
+		//DB Connect
+		let con = mysql.createConnection({
+			host: process.env.DATABASEHOST,
+			user: process.env.DB_USER,
+			password: process.env.DB_PASSWORD,
+			database: process.env.DB_DATABASE
+		});
 
-	con.connect(async function(error) {
-		if (error) {
-			currentdate = new Date();
-			fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Connection error: \n" + error, function (err) {
-				if (err) throw err;
-			});
-			console.log("Error: " + error + " job terminated")
-			//throw error;
-		} else {
-			if (process.env.FORCEACTIVATIONDATE) {
-				latestactivationdate = process.env.FORCEACTIVATIONDATE
+		con.connect(async function(error) {
+			if (error) {
+				currentdate = new Date();
+				fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Connection error: \n" + error, function (err) {
+					if (err) throw err;
+				});
+				console.log("Error: " + error + " job terminated")
+				//throw error;
 			} else {
-				latestactivationdate = await getLatestActivationDate(con)
+				if (process.env.FORCEACTIVATIONDATE) {
+					latestactivationdate = process.env.FORCEACTIVATIONDATE
+				} else {
+					latestactivationdate = await getLatestActivationDate(con)
+				}
+				if (latestactivationdate === null) {
+					var today = new Date();
+					var dd = addZero(today.getDate());
+
+					var mm = addZero(today.getMonth()+1); 
+					var yyyy = today.getFullYear();
+					latestactivationdate = yyyy + '-' + mm + '-' + dd;
+				}
+
+				//Start transaction!
+				con.beginTransaction();
+				
+				if (process.env.DELETEBOOKS === 'TRUE') {
+					const deletebooks = await deleteBooks(booktype, con)
+				}
+
+				currentdate = new Date();
+				fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest started." + "\n", function (err) {
+					if (err) throw err;
+				});
+
+				if (booktype == 'E') {
+					callalmaanalytics_E("", latestactivationdate, '', 0, con);
+				} else if (booktype == 'P') {
+					callalmaanalytics_P("", latestactivationdate, '', 0, con);
+				} else {
+					console.log("ange booktype!")
+				}
 			}
-			if (latestactivationdate === null) {
-				var today = new Date();
-				var dd = addZero(today.getDate());
 
-				var mm = addZero(today.getMonth()+1); 
-				var yyyy = today.getFullYear();
-				latestactivationdate = yyyy + '-' + mm + '-' + dd;
-			}
-
-			//Start transaction!
-			con.beginTransaction();
-			
-			if (process.env.DELETEBOOKS === 'TRUE') {
-				const deletebooks = await deleteBooks(booktype, con)
-			}
-
-			currentdate = new Date();
-			fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest started." + "\n", function (err) {
-				if (err) throw err;
-			});
-
-			if (booktype == 'E') {
-				callalmaanalytics_E("", latestactivationdate, '', 0, con);
-			} else if (booktype == 'P') {
-				callalmaanalytics_P("", latestactivationdate, '', 0, con);
-			} else {
-				console.log("ange booktype!")
-			}
-		}
-
-	});
+		});
+	} catch(err) {
+		console.log("Error create new books")
+	}
 
 }
 
