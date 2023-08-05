@@ -125,65 +125,70 @@ function addgooglecover(records, index, booktype, con, google_tries) {
 	var coverURL = "";
 	axios.get(thumbnail)
 		.then(async googleres => {
-			google_tries = 0;
-			var googleresponse = googleres.data.replace("updateGBSCover(","");
-			googleresponse = googleresponse.replace(");","");
-			googleresponse = JSON.parse(googleresponse);
-			for (var key in googleresponse) {
-				if (typeof googleresponse[key].thumbnail_url != 'undefined'){
-					coverURL = googleresponse[key].thumbnail_url.replace("proxy-eu.hosted.exlibrisgroup.com/exl_rewrite/","");
+			try {
+				google_tries = 0;
+				var googleresponse = googleres.data.replace("updateGBSCover(","");
+				googleresponse = googleresponse.replace(");","");
+				googleresponse = JSON.parse(googleresponse);
+				for (var key in googleresponse) {
+					if (typeof googleresponse[key].thumbnail_url != 'undefined'){
+						coverURL = googleresponse[key].thumbnail_url.replace("proxy-eu.hosted.exlibrisgroup.com/exl_rewrite/","");
+						sql = "UPDATE newbooks SET coverurl = '" + coverURL + "'" + 
+							" WHERE id = '" + records[index].id + "'";
+						con.query(sql)
+					}
+				}
+				if(coverURL == "") {
+					//syndetics som backup om inte google har omslaget
+					coverURL = 'https://secure.syndetics.com/index.aspx?isbn=' + records[index].isbnprimo + '/lc.gif&client=primo&type=unbound&imagelinking=1';
+					const img = await axios.get(coverURL)
+					if(img.headers['content-length']=='6210') {
+						coverURL = process.env.DEFAULT_COVER_URL
+					}
+					if( records[index].isbnprimo == '') {
+						coverURL = process.env.DEFAULT_COVER_URL
+					}
+
 					sql = "UPDATE newbooks SET coverurl = '" + coverURL + "'" + 
-						" WHERE id = '" + records[index].id + "'";
+							" WHERE id = '" + records[index].id + "'";
 					con.query(sql)
 				}
-			}
-			if(coverURL == "") {
-				//syndetics som backup om inte google har omslaget
-				coverURL = 'https://secure.syndetics.com/index.aspx?isbn=' + records[index].isbnprimo + '/lc.gif&client=primo&type=unbound&imagelinking=1';
-				const img = await axios.get(coverURL)
-    			if(img.headers['content-length']=='6210') {
-					coverURL = process.env.DEFAULT_COVER_URL
-				}
-				if( records[index].isbnprimo == '') {
-					coverURL = process.env.DEFAULT_COVER_URL
-				}
-
-				sql = "UPDATE newbooks SET coverurl = '" + coverURL + "'" + 
-						" WHERE id = '" + records[index].id + "'";
-				con.query(sql)
-			}
-			index++;
-			if (index < records.length){
-				//modulo
-				if( index % 50 == 0 ){
-					currentdate = new Date();
-					fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "Harvest, googlecover index: " + index + "...\n", function (err) {
-						if (err) throw err;
-					});
-					console.log("index: " + index + "...");
-				}
-				addgooglecover(records,index, booktype, con);
-			} else {
-				currentdate = new Date();
-				fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "Harvest, addgooglecover finished \n", function (err) {
-					if (err) throw err;
-				});
-				console.log("addgooglecover finished");
-				//Avsluta transaktion när hela processen är klar.
-				con.commit(function(error) {
-					if (error) { 
-						con.rollback(function() {
-					  	});
+				index++;
+				if (index < records.length){
+					//modulo
+					if( index % 50 == 0 ){
+						currentdate = new Date();
+						fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "Harvest, googlecover index: " + index + "...\n", function (err) {
+							if (err) throw err;
+						});
+						console.log("index: " + index + "...");
 					}
+					addgooglecover(records,index, booktype, con);
+				} else {
 					currentdate = new Date();
-					fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "Harvest, Database Transaction Complete \n", function (err) {
+					fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "Harvest, addgooglecover finished \n", function (err) {
 						if (err) throw err;
 					});
-					fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Finished! \n", function (err) {
-						if (err) throw err;
+					console.log("addgooglecover finished");
+					//Avsluta transaktion när hela processen är klar.
+					con.commit(function(error) {
+						if (error) { 
+							con.rollback(function() {
+							});
+						}
+						currentdate = new Date();
+						fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "Harvest, Database Transaction Complete \n", function (err) {
+							if (err) throw err;
+						});
+						fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Finished! \n", function (err) {
+							if (err) throw err;
+						});
+						console.log('Transaction Complete.');
 					});
-					console.log('Transaction Complete.');
-				});
+				}
+			} catch(err) {
+				console.log("Error when adding covers")
+				console.log(err)
 			}
 		})
 		.catch(error => {
