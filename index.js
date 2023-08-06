@@ -583,97 +583,104 @@ async function createnewbooksrecords(booktype) {
 console.log(new Date().toLocaleString());
 console.log("Almatools-tasks started");
 
-const pbooks = cron.schedule(process.env.CRON_PBOOKS, () => {
-	console.log(new Date().toLocaleString());
-	console.log("Cron Pbooks job started");
-	createnewbooksrecords('P');	
-});
+if (process.env.CRON_PBOOKS_ACTIVE) {
+	const pbooks = cron.schedule(process.env.CRON_PBOOKS, () => {
+		console.log(new Date().toLocaleString());
+		console.log("Cron Pbooks job started");
+		createnewbooksrecords('P');	
+	});
+}
 
-const ebooks = cron.schedule(process.env.CRON_EBOOKS, () => {
-	console.log(new Date().toLocaleString());
-	console.log("Cron Ebooks job started");
-	createnewbooksrecords('E');	
-});
+if (process.env.CRON_EBOOKS_ACTIVE) {
+	const ebooks = cron.schedule(process.env.CRON_EBOOKS, () => {
+		console.log(new Date().toLocaleString());
+		console.log("Cron Ebooks job started");
+		createnewbooksrecords('E');	
+	});
+}
 
-const alma_tdig = cron.schedule(process.env.CRON_TDIG, () => {
-	let payload = {
-		"parameter": [
-			{
-				"name": {
-					"value": "task_ExportBibParams_outputFormat_string",
-					"desc": null
+if (process.env.CRON_TDIG_ACTIVE) {
+	const alma_tdig = cron.schedule(process.env.CRON_TDIG, () => {
+		let payload = {
+			"parameter": [
+				{
+					"name": {
+						"value": "task_ExportBibParams_outputFormat_string",
+						"desc": null
+					},
+					"value": "TXT"
 				},
-				"value": "TXT"
-			},
-			{
-				"name": {
-					"value": "task_ExportBibParams_maxSize_string",
-					"desc": null
+				{
+					"name": {
+						"value": "task_ExportBibParams_maxSize_string",
+						"desc": null
+					},
+					"value": "0"
 				},
-				"value": "0"
-			},
-			{
-				"name": {
-					"value": "task_ExportBibParams_exportFolder_string",
-					"desc": null
+				{
+					"name": {
+						"value": "task_ExportBibParams_exportFolder_string",
+						"desc": null
+					},
+					"value": "INSTITUTION"
 				},
-				"value": "INSTITUTION"
-			},
-			{
-				"name": {
-					"value": "task_ExportParams_ftpConfig_string",
-					"desc": null
+				{
+					"name": {
+						"value": "task_ExportParams_ftpConfig_string",
+						"desc": null
+					},
+					"value": "28187006240002456"
 				},
-				"value": "28187006240002456"
-			},
-			{
-				"name": {
-					"value": "task_ExportParams_ftpSubdirectory_string",
-					"desc": null
+				{
+					"name": {
+						"value": "task_ExportParams_ftpSubdirectory_string",
+						"desc": null
+					},
+					"value": ""
 				},
-				"value": ""
-			},
-			{
-				"name": {
-					"value": "task_ExportParams_interfaceName",
-					"desc": null
+				{
+					"name": {
+						"value": "task_ExportParams_interfaceName",
+						"desc": null
+					},
+					"value": "false"
 				},
-				"value": "false"
-			},
-			{
-				"name": {
-					"value": "task_ExportParams_filterInactivePortfolios",
-					"desc": null
+				{
+					"name": {
+						"value": "task_ExportParams_filterInactivePortfolios",
+						"desc": null
+					},
+					"value": "false"
 				},
-				"value": "false"
-			},
-			{
-				"name": {
-					"value": "task_ExportParams_baseUrl",
-					"desc": null
+				{
+					"name": {
+						"value": "task_ExportParams_baseUrl",
+						"desc": null
+					},
+					"value": "http://pmt-eu.hosted.exlibrisgroup.com/openurl/46KTH/46KTH_services_page?"
 				},
-				"value": "http://pmt-eu.hosted.exlibrisgroup.com/openurl/46KTH/46KTH_services_page?"
-			},
-			{
-				"name": {
-					"value": "set_id",
-					"desc": null
+				{
+					"name": {
+						"value": "set_id",
+						"desc": null
+					},
+					"value": "2036151600002456"
 				},
-				"value": "2036151600002456"
-			},
-			{
-				"name": {
-					"value": "job_name",
-					"desc": null
-				},
-				"value": "Export Electronic Portfolios - via API - Portfolios export Tdig"
-			}
-		]
-	}
-	console.log(new Date().toLocaleString());
-	console.log("Alma Tdig Started");
-	runAlma(process.env.ALMA_TDIG_JOB_PATH, payload);	
-});
+				{
+					"name": {
+						"value": "job_name",
+						"desc": null
+					},
+					"value": "Export Electronic Portfolios - via API - Portfolios export Tdig"
+				}
+			]
+		}
+		console.log(new Date().toLocaleString());
+		console.log("Alma Tdig Started");
+		runAlma(process.env.ALMA_TDIG_JOB_PATH, payload);	
+	});
+}
+
 
 function addZero(i) {
     if (i < 10) {
