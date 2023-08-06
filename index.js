@@ -583,6 +583,7 @@ async function createnewbooksrecords(booktype) {
 		});
 	} catch(err) {
 		console.log("Error create new books")
+		console.log(err)
 	}
 
 }
