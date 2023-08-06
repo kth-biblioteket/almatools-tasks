@@ -534,59 +534,50 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 async function createnewbooksrecords(booktype) {
 	try {
 		let latestactivationdate
-		let currentdate
+		let currentdate	
+		if (process.env.FORCEACTIVATIONDATE) {
+			latestactivationdate = process.env.FORCEACTIVATIONDATE
+		} else {
+			latestactivationdate = await getLatestActivationDate('')
+		}
+		if (latestactivationdate === null) {
+			var today = new Date();
+			var dd = addZero(today.getDate());
 
-		database.db.connect(async function(error) {
-			if (error) {
-				currentdate = new Date();
-				fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Connection error: \n" + error, function (err) {
-					if (err) throw err;
-				});
-				console.log("Error: " + error + " job terminated")
-				//throw error;
-			} else {
-				if (process.env.FORCEACTIVATIONDATE) {
-					latestactivationdate = process.env.FORCEACTIVATIONDATE
-				} else {
-					latestactivationdate = await getLatestActivationDate(con)
-				}
-				if (latestactivationdate === null) {
-					var today = new Date();
-					var dd = addZero(today.getDate());
+			var mm = addZero(today.getMonth()+1); 
+			var yyyy = today.getFullYear();
+			latestactivationdate = yyyy + '-' + mm + '-' + dd;
+		}
 
-					var mm = addZero(today.getMonth()+1); 
-					var yyyy = today.getFullYear();
-					latestactivationdate = yyyy + '-' + mm + '-' + dd;
-				}
+		//Start transaction!
+		database.db.beginTransaction();
+		
+		if (process.env.DELETEBOOKS === 'TRUE') {
+			const deletebooks = await deleteBooks(booktype, con)
+		}
 
-				//Start transaction!
-				database.db.beginTransaction();
-				
-				if (process.env.DELETEBOOKS === 'TRUE') {
-					const deletebooks = await deleteBooks(booktype, con)
-				}
-
-				currentdate = new Date();
-				fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest started." + "\n", function (err) {
-					if (err) throw err;
-				});
-
-				if (booktype == 'E') {
-					callalmaanalytics_E("", latestactivationdate, '', 0, con);
-				} else if (booktype == 'P') {
-					callalmaanalytics_P("", latestactivationdate, '', 0, con);
-				} else {
-					console.log("ange booktype!")
-				}
-			}
-
+		currentdate = new Date();
+		fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest started." + "\n", function (err) {
+			if (err) throw err;
 		});
+
+		if (booktype == 'E') {
+			callalmaanalytics_E("", latestactivationdate, '', 0, '');
+		} else if (booktype == 'P') {
+			callalmaanalytics_P("", latestactivationdate, '', 0, '');
+		} else {
+			console.log("ange booktype!")
+		}
+
 	} catch(err) {
 		console.log("Error create new books")
 		console.log(err)
 	}
 
 }
+
+console.log(new Date().toLocaleString());
+console.log("Almatools-tasks started");
 
 const pbooks = cron.schedule(process.env.CRON_PBOOKS, () => {
 	console.log(new Date().toLocaleString());
