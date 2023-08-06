@@ -13,7 +13,7 @@ var parseString = require('xml2js').parseString;
 
 var appath = "./";
 
-var mysql = require('mysql')
+const database = require('./db');
 
 var primoxserviceendpoint = process.env.PRIMO_XSERVICE_ENDPOINT;
 
@@ -86,7 +86,7 @@ const getLatestActivationDate = (con) => {
         const sql = `SELECT DATE_FORMAT(max(activationdate), "%Y-%m-%d") as latestactivationdate 
 		FROM newbooks 
 		LIMIT 1`;
-        con.query(sql,(err, result) => {
+        database.db.query(sql,(err, result) => {
             if(err) {
                 console.error(err);
                 reject(err.message)
@@ -100,9 +100,9 @@ const deleteBooks = (booktype, con) => {
     return new Promise(function (resolve, reject) {
 		var currentdate = new Date();
         const sql = `DELETE FROM newbooks WHERE booktype = '${booktype}'`;
-        con.query(sql,(err, result) => {
+        database.db.query(sql,(err, result) => {
             if(err) {
-                con.rollback(function() {
+                database.db.rollback(function() {
 					fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, error deleting \n", function (err) {
 						if (err) throw err;
 					});
@@ -135,7 +135,7 @@ function addgooglecover(records, index, booktype, con, google_tries) {
 						coverURL = googleresponse[key].thumbnail_url.replace("proxy-eu.hosted.exlibrisgroup.com/exl_rewrite/","");
 						sql = "UPDATE newbooks SET coverurl = '" + coverURL + "'" + 
 							" WHERE id = '" + records[index].id + "'";
-						con.query(sql)
+						database.db.query(sql)
 					}
 				}
 				if(coverURL == "") {
@@ -151,7 +151,7 @@ function addgooglecover(records, index, booktype, con, google_tries) {
 
 					sql = "UPDATE newbooks SET coverurl = '" + coverURL + "'" + 
 							" WHERE id = '" + records[index].id + "'";
-					con.query(sql)
+					database.db.query(sql)
 				}
 				index++;
 				if (index < records.length){
@@ -171,9 +171,9 @@ function addgooglecover(records, index, booktype, con, google_tries) {
 					});
 					console.log("addgooglecover finished");
 					//Avsluta transaktion när hela processen är klar.
-					con.commit(function(error) {
+					database.db.commit(function(error) {
 						if (error) { 
-							con.rollback(function() {
+							database.db.rollback(function() {
 							});
 						}
 						currentdate = new Date();
@@ -225,7 +225,7 @@ function callprimoxservice(records,index, booktype, con) {
 						"' ,isbnprimo = '" + isbnprimo + 
 						"' ,thumbnail = '" + thumbnail + 
 						"' WHERE mmsid = '" + records[index].mmsid + "'";
-					con.query(sql)
+					database.db.query(sql)
 				} else {
 					fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "recordid saknas, mmsid: " + records[index].mmsid + "...\n", function (err) {
 						if (err) throw err;
@@ -251,7 +251,7 @@ function callprimoxservice(records,index, booktype, con) {
 						if (err) throw err;
 					});
 					console.log("primox finished");
-					con.query("SELECT * FROM newbooks where booktype = '" + booktype + "' AND thumbnail != '' AND thumbnail != 'no_cover' and thumbnail != 'o'", function (error, result, fields) {
+					database.db.query("SELECT * FROM newbooks where booktype = '" + booktype + "' AND thumbnail != '' AND thumbnail != 'no_cover' and thumbnail != 'o'", function (error, result, fields) {
 						if (error) {
 							currentdate = new Date();
 							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, error selecting " + error + "\n", function (err) {
@@ -356,7 +356,7 @@ function callalmaanalytics_E(endpoint, latestactivationdate, token, nrofprocesse
 									booksarray.push([mmsid, '', isbn, title, activationdate, publicationdate, dewey, subject, category, subcategory,'E']);
 								}
 								sql = "INSERT INTO newbooks(mmsid, recordid, isbn, title, activationdate, publicationdate, dewey, subject, category, subcategory, booktype) VALUES ?";
-								con.query(sql, [booksarray]);
+								database.db.query(sql, [booksarray]);
 								currentdate = new Date();
 								fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Inserted " + booksarray.length + " rows \n", function (err) {
 									if (err) throw err;
@@ -374,7 +374,7 @@ function callalmaanalytics_E(endpoint, latestactivationdate, token, nrofprocesse
 											AND activationdate > '${latestactivationdate}'
 											ORDER BY activationdate DESC 
 											LIMIT 500`
-									con.query(sql, function (error, result, fields) {
+									database.db.query(sql, function (error, result, fields) {
 										if (error) {
 											currentdate = new Date();
 											fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Error selecting " + error + "\n", function (err) {
@@ -394,7 +394,7 @@ function callalmaanalytics_E(endpoint, latestactivationdate, token, nrofprocesse
 									if (err) throw err;
 								});
 								console.log("No new books to harvest!");
-								con.rollback(function() {
+								database.db.rollback(function() {
 								});
 							}
 
@@ -477,7 +477,7 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 								booksarray.push([mmsid, '', isbn, title, activationdate, publicationdate, dewey, '', '', '', 'P']);
 							}
 							sql = "INSERT INTO newbooks(mmsid, recordid, isbn, title, activationdate, publicationdate, dewey, subject, category, subcategory, booktype) VALUES ?";
-							con.query(sql, [booksarray]);
+							database.db.query(sql, [booksarray]);
 							currentdate = new Date();
 							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Inserted " + booksarray.length + " rows \n", function (err) {
 								if (err) throw err;
@@ -495,7 +495,7 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 										AND activationdate > '${latestactivationdate}'
 										ORDER BY activationdate DESC 
 										LIMIT 500`
-								con.query(sql, function (error, result, fields) {
+								database.db.query(sql, function (error, result, fields) {
 									if (error) {
 										currentdate = new Date();
 										fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Error selecting " + error + "\n", function (err) {
@@ -515,7 +515,7 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 								if (err) throw err;
 							});
 							console.log("No new books to harvest!");
-							con.rollback(function() {
+							database.db.rollback(function() {
 							});
 						}
 
@@ -535,16 +535,8 @@ async function createnewbooksrecords(booktype) {
 	try {
 		let latestactivationdate
 		let currentdate
-	
-		//DB Connect
-		let con = mysql.createConnection({
-			host: process.env.DATABASEHOST,
-			user: process.env.DB_USER,
-			password: process.env.DB_PASSWORD,
-			database: process.env.DB_DATABASE
-		});
 
-		con.connect(async function(error) {
+		database.db.connect(async function(error) {
 			if (error) {
 				currentdate = new Date();
 				fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Connection error: \n" + error, function (err) {
@@ -568,7 +560,7 @@ async function createnewbooksrecords(booktype) {
 				}
 
 				//Start transaction!
-				con.beginTransaction();
+				database.db.beginTransaction();
 				
 				if (process.env.DELETEBOOKS === 'TRUE') {
 					const deletebooks = await deleteBooks(booktype, con)
