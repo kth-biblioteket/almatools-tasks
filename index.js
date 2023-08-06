@@ -86,7 +86,7 @@ const getLatestActivationDate = (con) => {
         const sql = `SELECT DATE_FORMAT(max(activationdate), "%Y-%m-%d") as latestactivationdate 
 		FROM newbooks 
 		LIMIT 1`;
-        database.db.query(sql,(err, result) => {
+        con.query(sql,(err, result) => {
             if(err) {
                 console.error(err);
                 reject(err.message)
@@ -100,9 +100,9 @@ const deleteBooks = (booktype, con) => {
     return new Promise(function (resolve, reject) {
 		var currentdate = new Date();
         const sql = `DELETE FROM newbooks WHERE booktype = '${booktype}'`;
-        database.db.query(sql,(err, result) => {
+        con.query(sql,(err, result) => {
             if(err) {
-                database.db.rollback(function() {
+                con.rollback(function() {
 					fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, error deleting \n", function (err) {
 						if (err) throw err;
 					});
@@ -135,7 +135,7 @@ function addgooglecover(records, index, booktype, con, google_tries) {
 						coverURL = googleresponse[key].thumbnail_url.replace("proxy-eu.hosted.exlibrisgroup.com/exl_rewrite/","");
 						sql = "UPDATE newbooks SET coverurl = '" + coverURL + "'" + 
 							" WHERE id = '" + records[index].id + "'";
-						database.db.query(sql)
+						con.query(sql)
 					}
 				}
 				if(coverURL == "") {
@@ -151,7 +151,7 @@ function addgooglecover(records, index, booktype, con, google_tries) {
 
 					sql = "UPDATE newbooks SET coverurl = '" + coverURL + "'" + 
 							" WHERE id = '" + records[index].id + "'";
-					database.db.query(sql)
+					con.query(sql)
 				}
 				index++;
 				if (index < records.length){
@@ -171,9 +171,9 @@ function addgooglecover(records, index, booktype, con, google_tries) {
 					});
 					console.log("addgooglecover finished");
 					//Avsluta transaktion när hela processen är klar.
-					database.db.commit(function(error) {
+					con.commit(function(error) {
 						if (error) { 
-							database.db.rollback(function() {
+							con.rollback(function() {
 							});
 						}
 						currentdate = new Date();
@@ -225,7 +225,7 @@ function callprimoxservice(records,index, booktype, con) {
 						"' ,isbnprimo = '" + isbnprimo + 
 						"' ,thumbnail = '" + thumbnail + 
 						"' WHERE mmsid = '" + records[index].mmsid + "'";
-					database.db.query(sql)
+					con.query(sql)
 				} else {
 					fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "recordid saknas, mmsid: " + records[index].mmsid + "...\n", function (err) {
 						if (err) throw err;
@@ -251,7 +251,7 @@ function callprimoxservice(records,index, booktype, con) {
 						if (err) throw err;
 					});
 					console.log("primox finished");
-					database.db.query("SELECT * FROM newbooks where booktype = '" + booktype + "' AND thumbnail != '' AND thumbnail != 'no_cover' and thumbnail != 'o'", function (error, result, fields) {
+					con.query("SELECT * FROM newbooks where booktype = '" + booktype + "' AND thumbnail != '' AND thumbnail != 'no_cover' and thumbnail != 'o'", function (error, result, fields) {
 						if (error) {
 							currentdate = new Date();
 							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, error selecting " + error + "\n", function (err) {
@@ -356,7 +356,7 @@ function callalmaanalytics_E(endpoint, latestactivationdate, token, nrofprocesse
 									booksarray.push([mmsid, '', isbn, title, activationdate, publicationdate, dewey, subject, category, subcategory,'E']);
 								}
 								sql = "INSERT INTO newbooks(mmsid, recordid, isbn, title, activationdate, publicationdate, dewey, subject, category, subcategory, booktype) VALUES ?";
-								database.db.query(sql, [booksarray]);
+								con.query(sql, [booksarray]);
 								currentdate = new Date();
 								fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Inserted " + booksarray.length + " rows \n", function (err) {
 									if (err) throw err;
@@ -374,7 +374,7 @@ function callalmaanalytics_E(endpoint, latestactivationdate, token, nrofprocesse
 											AND activationdate > '${latestactivationdate}'
 											ORDER BY activationdate DESC 
 											LIMIT 500`
-									database.db.query(sql, function (error, result, fields) {
+									con.query(sql, function (error, result, fields) {
 										if (error) {
 											currentdate = new Date();
 											fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Error selecting " + error + "\n", function (err) {
@@ -394,7 +394,7 @@ function callalmaanalytics_E(endpoint, latestactivationdate, token, nrofprocesse
 									if (err) throw err;
 								});
 								console.log("No new books to harvest!");
-								database.db.rollback(function() {
+								con.rollback(function() {
 								});
 							}
 
@@ -477,7 +477,7 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 								booksarray.push([mmsid, '', isbn, title, activationdate, publicationdate, dewey, '', '', '', 'P']);
 							}
 							sql = "INSERT INTO newbooks(mmsid, recordid, isbn, title, activationdate, publicationdate, dewey, subject, category, subcategory, booktype) VALUES ?";
-							database.db.query(sql, [booksarray]);
+							con.query(sql, [booksarray]);
 							currentdate = new Date();
 							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Inserted " + booksarray.length + " rows \n", function (err) {
 								if (err) throw err;
@@ -495,7 +495,7 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 										AND activationdate > '${latestactivationdate}'
 										ORDER BY activationdate DESC 
 										LIMIT 500`
-								database.db.query(sql, function (error, result, fields) {
+								con.query(sql, function (error, result, fields) {
 									if (error) {
 										currentdate = new Date();
 										fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Error selecting " + error + "\n", function (err) {
@@ -515,7 +515,7 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 								if (err) throw err;
 							});
 							console.log("No new books to harvest!");
-							database.db.rollback(function() {
+							con.rollback(function() {
 							});
 						}
 
@@ -534,41 +534,45 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 async function createnewbooksrecords(booktype) {
 	try {
 		let latestactivationdate
-		let currentdate	
-		if (process.env.FORCEACTIVATIONDATE) {
-			latestactivationdate = process.env.FORCEACTIVATIONDATE
-		} else {
-			latestactivationdate = await getLatestActivationDate('')
-		}
-		if (latestactivationdate === null) {
-			var today = new Date();
-			var dd = addZero(today.getDate());
+		let currentdate
 
-			var mm = addZero(today.getMonth()+1); 
-			var yyyy = today.getFullYear();
-			latestactivationdate = yyyy + '-' + mm + '-' + dd;
-		}
+		database.db.getConnection(async function(error, con) {
+			
+				if (process.env.FORCEACTIVATIONDATE) {
+					latestactivationdate = process.env.FORCEACTIVATIONDATE
+				} else {
+					latestactivationdate = await getLatestActivationDate(con)
+				}
+				if (latestactivationdate === null) {
+					var today = new Date();
+					var dd = addZero(today.getDate());
 
-		//Start transaction!
-		database.db.beginTransaction();
-		
-		if (process.env.DELETEBOOKS === 'TRUE') {
-			const deletebooks = await deleteBooks(booktype, con)
-		}
+					var mm = addZero(today.getMonth()+1); 
+					var yyyy = today.getFullYear();
+					latestactivationdate = yyyy + '-' + mm + '-' + dd;
+				}
 
-		currentdate = new Date();
-		fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest started." + "\n", function (err) {
-			if (err) throw err;
+				//Start transaction!
+				con.beginTransaction();
+				
+				if (process.env.DELETEBOOKS === 'TRUE') {
+					const deletebooks = await deleteBooks(booktype, con)
+				}
+
+				currentdate = new Date();
+				fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest started." + "\n", function (err) {
+					if (err) throw err;
+				});
+
+				if (booktype == 'E') {
+					callalmaanalytics_E("", latestactivationdate, '', 0, con);
+				} else if (booktype == 'P') {
+					callalmaanalytics_P("", latestactivationdate, '', 0, con);
+				} else {
+					console.log("ange booktype!")
+				}
+
 		});
-
-		if (booktype == 'E') {
-			callalmaanalytics_E("", latestactivationdate, '', 0, '');
-		} else if (booktype == 'P') {
-			callalmaanalytics_P("", latestactivationdate, '', 0, '');
-		} else {
-			console.log("ange booktype!")
-		}
-
 	} catch(err) {
 		console.log("Error create new books")
 		console.log(err)
