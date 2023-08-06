@@ -583,7 +583,7 @@ async function createnewbooksrecords(booktype) {
 console.log(new Date().toLocaleString());
 console.log("Almatools-tasks started");
 
-if (process.env.CRON_PBOOKS_ACTIVE) {
+if (process.env.CRON_PBOOKS_ACTIVE === 'true') {
 	const pbooks = cron.schedule(process.env.CRON_PBOOKS, () => {
 		console.log(new Date().toLocaleString());
 		console.log("Cron Pbooks job started");
@@ -591,7 +591,7 @@ if (process.env.CRON_PBOOKS_ACTIVE) {
 	});
 }
 
-if (process.env.CRON_EBOOKS_ACTIVE) {
+if (process.env.CRON_EBOOKS_ACTIVE === 'true') {
 	const ebooks = cron.schedule(process.env.CRON_EBOOKS, () => {
 		console.log(new Date().toLocaleString());
 		console.log("Cron Ebooks job started");
@@ -599,7 +599,7 @@ if (process.env.CRON_EBOOKS_ACTIVE) {
 	});
 }
 
-if (process.env.CRON_TDIG_ACTIVE) {
+if (process.env.CRON_TDIG_ACTIVE === 'true') {
 	const alma_tdig = cron.schedule(process.env.CRON_TDIG, () => {
 		let payload = {
 			"parameter": [
