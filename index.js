@@ -81,11 +81,12 @@ async function sendMail(mail_to, lang) {
 }
 
 //Hämta senaste aktiveringsdatum från tabellen newbooks
-const getLatestActivationDate = (con) => {
+const getLatestActivationDate = (booktype, con) => {
     return new Promise(function (resolve, reject) {
         const sql = `SELECT DATE_FORMAT(max(activationdate), "%Y-%m-%d") as latestactivationdate 
-		FROM newbooks 
-		LIMIT 1`;
+					FROM newbooks 
+					WHERE booktype = '${booktype}'
+					LIMIT 1`;
         con.query(sql,(err, result) => {
             if(err) {
                 console.error(err);
@@ -634,7 +635,7 @@ async function createnewbooksrecords(booktype) {
 				if (process.env.FORCEACTIVATIONDATE) {
 					latestactivationdate = process.env.FORCEACTIVATIONDATE
 				} else {
-					latestactivationdate = await getLatestActivationDate(con)
+					latestactivationdate = await getLatestActivationDate(booktype, con)
 				}
 				if (latestactivationdate === null) {
 					var today = new Date();
