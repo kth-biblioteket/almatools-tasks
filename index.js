@@ -142,6 +142,7 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 					}
 					if(coverURL == "") {
 						//syndetics som backup om inte google har omslaget
+						console.log("no google cover, trying syndetics");
 						coverURL = 'https://secure.syndetics.com/index.aspx?isbn=' + records[index].isbnprimo + '/lc.gif&client=primo&type=unbound&imagelinking=1';
 						const img = await axios.get(coverURL)
 						if(img.headers['content-length']=='6210') {
