@@ -123,7 +123,7 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 	var thumbnail = "";
 	thumbnail =	records[index].thumbnail;
 	var coverURL = "";
-	if(thumbnail && ! index > records.length) {
+	if(thumbnail && index <= records.length) {
 		axios.get(thumbnail)
 			.then(async googleres => {
 				try {
