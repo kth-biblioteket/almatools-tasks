@@ -287,7 +287,7 @@ function callprimoxservice(records, index, booktype, latestactivationdate, con) 
 					});
 					console.log("primox finished");
 					sql = `SELECT * FROM newbooks 
-							WHERE booktype = '${booktype}' AND activationdate > '${latestactivationdate}`
+							WHERE booktype = '${booktype}' AND activationdate > '${latestactivationdate}'`
 					con.query(sql, function (error, result, fields) {
 						if (error) {
 							currentdate = new Date();
