@@ -213,7 +213,38 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 							" WHERE id = '" + records[index].id + "'";
 					con.query(sql)
 					index++;
-					addgooglecover(records, index, booktype, con, google_tries);
+					if (index < records.length){
+						//modulo
+						if( index % 50 == 0 ){
+							currentdate = new Date();
+							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "Harvest, googlecover index: " + index + "...\n", function (err) {
+								if (err) throw err;
+							});
+							console.log("index: " + index + "...");
+						}
+						addgooglecover(records,index, booktype, con);
+					} else {
+						currentdate = new Date();
+						fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "Harvest, addgooglecover finished \n", function (err) {
+							if (err) throw err;
+						});
+						console.log("addgooglecover finished");
+						//Avsluta transaktion när hela processen är klar.
+						con.commit(function(error) {
+							if (error) { 
+								con.rollback(function() {
+								});
+							}
+							currentdate = new Date();
+							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "Harvest, Database Transaction Complete \n", function (err) {
+								if (err) throw err;
+							});
+							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, Finished! \n", function (err) {
+								if (err) throw err;
+							});
+							console.log('Transaction Complete.');
+						});
+					}
 				}
 			});
 	} else {
@@ -231,7 +262,8 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 		sql = "UPDATE newbooks SET coverurl = '" + coverURL + "'" + 
 				" WHERE id = '" + records[index].id + "'";
 		con.query(sql)
-		if (index < records.length -1){
+		index++;
+		if (index < records.length){
 			//modulo
 			if( index % 50 == 0 ){
 				currentdate = new Date();
