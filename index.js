@@ -238,7 +238,7 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 	}
 }
 
-function callprimoxservice(records,index, booktype, con) {
+function callprimoxservice(records, index, booktype, latestactivationdate, con) {
 	var endpoint = primoxserviceendpoint + '?json=true&institution=46KTH&onCampus=true&query=addsrcrid,exact,' + records[index].mmsid + '&indx=1&bulkSize=10&loc=local,scope:(46KTH)&loc=adaptor,primo_central_multiple_fe';	
 	axios.get(endpoint)
 		.then(response => {
@@ -279,14 +279,16 @@ function callprimoxservice(records,index, booktype, con) {
 						});
 						console.log("index: " + index + "...");
 					}
-					callprimoxservice(records,index, booktype, con);
+					callprimoxservice(records,index, booktype, latestactivationdate, con);
 				} else {
 					currentdate = new Date();
 					fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, primox finished \n", function (err) {
 						if (err) throw err;
 					});
 					console.log("primox finished");
-					con.query("SELECT * FROM newbooks where booktype = '" + booktype + "' AND thumbnail != '' AND thumbnail != 'no_cover' and thumbnail != 'o'", function (error, result, fields) {
+					sql = `SELECT * FROM newbooks 
+							WHERE booktype = '${booktype}' AND activationdate > '${latestactivationdate}`
+					con.query(sql, function (error, result, fields) {
 						if (error) {
 							currentdate = new Date();
 							fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + " Harvest, error selecting " + error + "\n", function (err) {
@@ -416,7 +418,7 @@ function callalmaanalytics_E(endpoint, latestactivationdate, token, nrofprocesse
 												if (err) throw err;
 											});
 										} else {
-											callprimoxservice(result, 0, 'E', con);
+											callprimoxservice(result, 0, 'E', latestactivationdate, con);
 										}
 									});
 								}
@@ -537,7 +539,7 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 											if (err) throw err;
 										});
 									} else {
-										callprimoxservice(result, 0, 'P', con);
+										callprimoxservice(result, 0, 'P', latestactivationdate, con);
 									}
 								});
 							}
