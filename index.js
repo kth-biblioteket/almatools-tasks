@@ -124,7 +124,7 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 	thumbnail =	records[index].thumbnail;
 	console.log(thumbnail)
 	var coverURL = "";
-	if(thumbnail != null && thumbnail != '' && index <= records.length) {
+	if(thumbnail != null && thumbnail != '' && index < records.length) {
 		axios.get(thumbnail)
 			.then(async googleres => {
 				try {
@@ -270,7 +270,7 @@ function callprimoxservice(records, index, booktype, latestactivationdate, con) 
 					console.log(endpoint);
 				}
 				index++;
-				if (index < records.length){
+				if (index < records.length - 1){
 					//modulo
 					if( index % 50 == 0 ){
 						currentdate = new Date();
