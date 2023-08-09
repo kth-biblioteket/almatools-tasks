@@ -211,11 +211,14 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 					sql = "UPDATE newbooks SET coverurl = '" + coverURL + "'" + 
 							" WHERE id = '" + records[index].id + "'";
 					con.query(sql)
-					index++;
-					addgooglecover(records, index, booktype, con, google_tries);
+					if (index <= records.length) {
+						index++;
+						addgooglecover(records, index, booktype, con, google_tries);
+					}
 				}
 			});
 	} else {
+		console.log("no thumbnail");
 		//syndetics som backup om inte google har omslaget
 		coverURL = 'https://secure.syndetics.com/index.aspx?isbn=' + records[index].isbn + '/lc.gif&client=primo&type=unbound&imagelinking=1';
 		const img = await axios.get(coverURL)
@@ -229,6 +232,7 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 		sql = "UPDATE newbooks SET coverurl = '" + coverURL + "'" + 
 				" WHERE id = '" + records[index].id + "'";
 		con.query(sql)
+		if 
 		index++;
 		addgooglecover(records,index, booktype, con);
 	}
