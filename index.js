@@ -191,12 +191,25 @@ function addgooglecover(records, index, booktype, con, google_tries) {
 				console.log(err)
 			}
 		})
-		.catch(error => {
+		.catch(async error => {
 			console.log("GoogleError: " + error);
 			if (google_tries < 5) {
 				google_tries++;
 				addgooglecover(records, index, booktype, con, google_tries);
 			} else {
+				//syndetics som backup om inte google har omslaget
+				coverURL = 'https://secure.syndetics.com/index.aspx?isbn=' + records[index].isbnprimo + '/lc.gif&client=primo&type=unbound&imagelinking=1';
+				const img = await axios.get(coverURL)
+				if(img.headers['content-length']=='6210') {
+					coverURL = process.env.DEFAULT_COVER_URL
+				}
+				if( records[index].isbnprimo == '') {
+					coverURL = process.env.DEFAULT_COVER_URL
+				}
+
+				sql = "UPDATE newbooks SET coverurl = '" + coverURL + "'" + 
+						" WHERE id = '" + records[index].id + "'";
+				con.query(sql)
 				index++;
 				addgooglecover(records, index, booktype, con, google_tries);
 			}
