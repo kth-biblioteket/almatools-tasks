@@ -122,7 +122,6 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
     let sql
 	var thumbnail = "";
 	thumbnail =	records[index].thumbnail;
-	console.log(thumbnail)
 	var coverURL = "";
 	if(thumbnail != null && thumbnail != '' && index <= records.length) {
 		axios.get(thumbnail)
@@ -200,6 +199,7 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 					addgooglecover(records, index, booktype, con, google_tries);
 				} else {
 					//syndetics som backup om inte google har omslaget
+					console.log("no google cover, trying syndetics");
 					coverURL = 'https://secure.syndetics.com/index.aspx?isbn=' + records[index].isbnprimo + '/lc.gif&client=primo&type=unbound&imagelinking=1';
 					const img = await axios.get(coverURL)
 					if(img.headers['content-length']=='6210') {
@@ -248,7 +248,7 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 				}
 			});
 	} else {
-		console.log("no thumbnail");
+		console.log("no thumbnail, trying syndetics");
 		//syndetics som backup om inte google har omslaget
 		coverURL = 'https://secure.syndetics.com/index.aspx?isbn=' + records[index].isbn + '/lc.gif&client=primo&type=unbound&imagelinking=1';
 		const img = await axios.get(coverURL)
@@ -325,9 +325,6 @@ function callprimoxservice(records, index, booktype, latestactivationdate, con) 
 					fs.appendFile(appath + 'harvest.log', addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes()) + ":" + addZero(currentdate.getSeconds()) + "recordid saknas, mmsid: " + records[index].mmsid + "...\n", function (err) {
 						if (err) throw err;
 					});
-					console.log("recordid saknas, mmsid: " + records[index].mmsid);
-					console.log(JSON.stringify(response.data, null, 2));
-					console.log(endpoint);
 				}
 				index++;
 				if (index < records.length){
@@ -355,7 +352,6 @@ function callprimoxservice(records, index, booktype, latestactivationdate, con) 
 								if (err) throw err;
 							});
 						} else {
-							console.log(result.length)
 							addgooglecover(result, 0, booktype, con);
 						}
 					});
