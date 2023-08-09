@@ -211,10 +211,8 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 					sql = "UPDATE newbooks SET coverurl = '" + coverURL + "'" + 
 							" WHERE id = '" + records[index].id + "'";
 					con.query(sql)
-					if (index <= records.length) {
-						index++;
-						addgooglecover(records, index, booktype, con, google_tries);
-					}
+					index++;
+					addgooglecover(records, index, booktype, con, google_tries);
 				}
 			});
 	} else {
@@ -232,9 +230,10 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 		sql = "UPDATE newbooks SET coverurl = '" + coverURL + "'" + 
 				" WHERE id = '" + records[index].id + "'";
 		con.query(sql)
-		if 
-		index++;
-		addgooglecover(records,index, booktype, con);
+		if (index <= records.length) {
+			index++;
+			addgooglecover(records, index, booktype, con);
+		}
 	}
 }
 
