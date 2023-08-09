@@ -231,7 +231,7 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 		sql = "UPDATE newbooks SET coverurl = '" + coverURL + "'" + 
 				" WHERE id = '" + records[index].id + "'";
 		con.query(sql)
-		if (index <= records.length) {
+		if (index < records.length) {
 			index++;
 			addgooglecover(records, index, booktype, con);
 		}
