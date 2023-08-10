@@ -519,7 +519,7 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 
 	var endpoint
 	endpoint = process.env.ALMA_ANALYTICS_API_ENDPOINT_PBOOKS + 
-	`&filter=<sawx:expr xsi:type="sawx:comparison" op="greaterOrEqual" xmlns:saw="com.siebel.analytics.web/report/v1.1" xmlns:sawx="com.siebel.analytics.web/expression/v1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><sawx:expr xsi:type="sawx:sqlExpression">"Physical Item Details"."Receiving Date (Calendar)"</sawx:expr><sawx:expr xsi:type="sawx:sqlExpression">TIMESTAMPADD(SQL_TSI_DAY, +1, date '${latestactivationdate}')</sawx:expr></sawx:expr>&limit=25`;
+	`&filter=<sawx:expr xsi:type="sawx:comparison" op="greaterOrEqual" xmlns:saw="com.siebel.analytics.web/report/v1.1" xmlns:sawx="com.siebel.analytics.web/expression/v1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><sawx:expr xsi:type="sawx:sqlExpression">"Item Creation Date"."Item Creation Date"</sawx:expr><sawx:expr xsi:type="sawx:sqlExpression">TIMESTAMPADD(SQL_TSI_DAY, +1, date '${latestactivationdate}')</sawx:expr></sawx:expr>&limit=25`;
 
 	if(token!= '') {
 		endpoint = endpoint + '&token=' + token;
