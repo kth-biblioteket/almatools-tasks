@@ -142,7 +142,6 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 					}
 					if(coverURL == "") {
 						//syndetics som backup om inte google har omslaget
-						console.log("no google cover, trying syndetics");
 						coverURL = 'https://secure.syndetics.com/index.aspx?isbn=' + records[index].isbnprimo + '/lc.gif&client=primo&type=unbound&imagelinking=1';
 						const img = await axios.get(coverURL)
 						if(img.headers['content-length']=='6210') {
@@ -195,13 +194,11 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 				}
 			})
 			.catch(async error => {
-				console.log("GoogleError: " + error);
 				if (google_tries < 5) {
 					google_tries++;
 					addgooglecover(records, index, booktype, con, google_tries);
 				} else {
 					//syndetics som backup om inte google har omslaget
-					console.log("no google cover, trying syndetics");
 					coverURL = 'https://secure.syndetics.com/index.aspx?isbn=' + records[index].isbnprimo + '/lc.gif&client=primo&type=unbound&imagelinking=1';
 					const img = await axios.get(coverURL)
 					if(img.headers['content-length']=='6210') {
@@ -250,7 +247,6 @@ async function addgooglecover(records, index, booktype, con, google_tries) {
 				}
 			});
 	} else {
-		console.log("no thumbnail, trying syndetics");
 		//syndetics som backup om inte google har omslaget
 		coverURL = 'https://secure.syndetics.com/index.aspx?isbn=' + records[index].isbn + '/lc.gif&client=primo&type=unbound&imagelinking=1';
 		const img = await axios.get(coverURL)
@@ -385,6 +381,7 @@ function callalmaanalytics_E(endpoint, latestactivationdate, token, nrofprocesse
 	endpoint = process.env.ALMA_ANALYTICS_API_ENDPOINT_EBOOKS + 
 	`&filter=<sawx:expr xsi:type="sawx:comparison" op="greaterOrEqual" xmlns:saw="com.siebel.analytics.web/report/v1.1" xmlns:sawx="com.siebel.analytics.web/expression/v1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><sawx:expr xsi:type="sawx:sqlExpression">"E-Inventory"."Portfolio Activation Date"."Portfolio Activation Date"</sawx:expr><sawx:expr xsi:type="sawx:sqlExpression">TIMESTAMPADD(SQL_TSI_DAY, +1, date '${latestactivationdate}')</sawx:expr></sawx:expr>&limit=25`;
 
+	//Om token existerar så hämtas nästa 25 rader från analytics
 	if(token!= '') {
 		endpoint = endpoint + '&token=' + token;
 	}
@@ -650,7 +647,7 @@ async function createnewbooksrecords(booktype) {
 				//Start transaction!
 				con.beginTransaction();
 				
-				if (process.env.DELETEBOOKS === 'TRUE') {
+				if (process.env.DELETEBOOKS === 'true') {
 					const deletebooks = await deleteBooks(booktype, con)
 				}
 
