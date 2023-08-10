@@ -457,7 +457,7 @@ function callalmaanalytics_E(endpoint, latestactivationdate, token, nrofprocesse
 								nrofprocessedrecords = nrofprocessedrecords + booksarray.length;
 								console.log("nrofprocessedrecords " + nrofprocessedrecords);
 								//max xxx titlar
-								if(IsFinished == 'false' && nrofprocessedrecords < 10000) {
+								if(IsFinished == 'false' && nrofprocessedrecords < process.env.MAX_TITLES_TO_ADD) {
 									callalmaanalytics_E(endpoint, latestactivationdate, token,nrofprocessedrecords, con);
 								} else {
 									//Alla titlar hämtade och tillagda i tabellen newbooks
@@ -465,7 +465,7 @@ function callalmaanalytics_E(endpoint, latestactivationdate, token, nrofprocesse
 											WHERE booktype = 'E'
 											AND activationdate > '${latestactivationdate}'
 											ORDER BY activationdate DESC 
-											LIMIT 500`
+											LIMIT ${process.env.MAX_TITLES_TO_ADD}`
 									con.query(sql, function (error, result, fields) {
 										if (error) {
 											currentdate = new Date();
@@ -578,7 +578,7 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 							nrofprocessedrecords = nrofprocessedrecords + booksarray.length;
 							console.log("nrofprocessedrecords " +nrofprocessedrecords);
 							//max xxx titlar
-							if(IsFinished == 'false' && nrofprocessedrecords < 500) {
+							if(IsFinished == 'false' && nrofprocessedrecords < process.env.MAX_TITLES_TO_ADD) {
 								callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocessedrecords, con);
 							} else {
 								//Alla titlar hämtade och tillagda i tabellen newbooks
@@ -586,7 +586,7 @@ function callalmaanalytics_P(endpoint, latestactivationdate, token, nrofprocesse
 										WHERE booktype = 'P'
 										AND activationdate > '${latestactivationdate}'
 										ORDER BY activationdate DESC 
-										LIMIT 500`
+										LIMIT ${process.env.MAX_TITLES_TO_ADD}`
 								con.query(sql, function (error, result, fields) {
 									if (error) {
 										currentdate = new Date();
