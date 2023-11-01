@@ -756,7 +756,7 @@ if (process.env.CRON_TDIG_ACTIVE === 'true') {
 						"value": "set_id",
 						"desc": null
 					},
-					"value": "2036151600002456"
+					"value": process.env.ALMA_TDIG_SET_ID
 				},
 				{
 					"name": {
