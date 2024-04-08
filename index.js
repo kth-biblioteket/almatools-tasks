@@ -749,7 +749,7 @@ if (process.env.CRON_TDIG_ACTIVE === 'true') {
 						"value": "task_ExportParams_baseUrl",
 						"desc": null
 					},
-					"value": "http://pmt-eu.hosted.exlibrisgroup.com/openurl/46KTH/46KTH_services_page?"
+					"value": process.env.ALMA_LINK_SERVER_URL
 				},
 				{
 					"name": {
