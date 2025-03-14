@@ -1,5 +1,6 @@
 require('dotenv').config({path:'almatools-tasks.env'})
 const fs = require('fs');
+const fspromises = require("fs").promises;
 const cron = require('node-cron');
 const https = require('https');
 const axios = require('axios')
@@ -15,8 +16,9 @@ var appath = "./";
 
 const database = require('./db');
 
-var primoxserviceendpoint = process.env.PRIMO_XSERVICE_ENDPOINT;
+const librisimport = require('./librisimport');
 
+var primoxserviceendpoint = process.env.PRIMO_XSERVICE_ENDPOINT;
 
 async function runAlma(jobpath, payload) {
 
@@ -773,6 +775,54 @@ if (process.env.CRON_TDIG_ACTIVE === 'true') {
 	});
 }
 
+if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
+	const LAST_UNTIL_FILE = path.join(__dirname, "lastuntiltime.txt");
+	
+	async function getLastUntilTime() {
+		try {
+			const data = await fspromises.readFile(LAST_UNTIL_FILE, "utf-8");
+			return data.trim();
+		} catch (error) {
+			console.warn("No previous lastUntilTime found. Using default.");
+			return new Date().toISOString().split('.')[0];
+		}
+	}
+	
+	async function updateLastUntilTime(time) {
+		try {
+			await fspromises.writeFile(LAST_UNTIL_FILE, time, "utf-8");
+		} catch (error) {
+			console.error("Error saving lastUntilTime:", error);
+		}
+	}
+
+	let isRunning = false;
+
+	cron.schedule(process.env.CRON_LIBRISIMPORT, async () => {
+
+		if (isRunning) {
+			console.log("❌ Hoppa över: Det körs redan en import.");
+			return;
+		}
+
+		isRunning = true;
+		try {
+			const lastUntilTime = await getLastUntilTime();
+			const nowTime = new Date().toISOString().split('.')[0];
+
+			console.log(`Running librisimport from ${lastUntilTime} to ${nowTime}`);
+
+			await librisimport.main(lastUntilTime, nowTime);
+
+			await updateLastUntilTime(nowTime);
+
+		} catch (error) {
+			console.error("Error in cron job:", error);
+		} finally {
+			isRunning = false;
+		}
+	});
+}
 
 function addZero(i) {
     if (i < 10) {

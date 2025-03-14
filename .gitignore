@@ -5,4 +5,8 @@ node_modules
 *.csv
 *.txt
 *.zip
-test.js
+dev
+Dockerfile-dev
+docker-compose-dev.yml
+package-dev.json
+test*.*
