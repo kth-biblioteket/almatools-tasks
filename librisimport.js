@@ -11,6 +11,7 @@ const xml2js = require('xml2js');
  */
 const main = async (fromDate, toDate) => {
     try {
+        let recordsArray;
         const filePath = path.join(__dirname, "librisexport.properties");
         const response = await getLibrisUpdates(filePath, fromDate, toDate);
         const result = await parseXml(response);
@@ -20,7 +21,7 @@ const main = async (fromDate, toDate) => {
             return { status: "no_records" };
         }
 
-        const recordsArray = Array.isArray(result.collection.record) ? result.collection.record : [result.collection.record];
+        recordsArray = Array.isArray(result.collection.record) ? result.collection.record : [result.collection.record];
 
         for (const record of recordsArray) {
             await processRecord(record);
