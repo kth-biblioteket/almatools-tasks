@@ -10,8 +10,8 @@ const xml2js = require('xml2js');
  * @returns 
  */
 const main = async (fromDate, toDate) => {
+    let recordsArray;
     try {
-        let recordsArray;
         const filePath = path.join(__dirname, "librisexport.properties");
         const response = await getLibrisUpdates(filePath, fromDate, toDate);
         const result = await parseXml(response);
