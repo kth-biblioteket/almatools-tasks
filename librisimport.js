@@ -54,10 +54,10 @@ async function processRecord(record) {
         const controlFieldValue_id = getControlFieldValue(record, '001');
         console.log("📌 bib_id:", controlFieldValue_id);
 
-        const librisType = await getLibrisType(controlFieldValue)
-        console.log("📌 libris_type:", librisType);
+        //const librisType = await getLibrisType(controlFieldValue_id)
+        //console.log("📌 libris_type:", librisType);
 
-        const other_system_number = getOtherSystemNumber(record, controlFieldValue);
+        const other_system_number = getOtherSystemNumber(record, controlFieldValue_id);
         console.log("📌 other_system_number:", other_system_number);
 
         // Kör bara om typen är Thesis 
