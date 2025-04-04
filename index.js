@@ -813,7 +813,7 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 			console.log(`Running librisimport from ${lastUntilTime} to ${nowTime}`);
 
 			const result = await librisimport.main(lastUntilTime, nowTime);
-			
+
 			if (result.status === "error") {
 				const transporter = nodemailer.createTransport({
 					port: 25,
@@ -826,7 +826,7 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 					from: process.env.MAILFROM_ADDRESS,
 					to: process.env.MAIL_ERROR_TO_ADDRESS,
 					subject: "🚨 LibrisImport Failed",
-					text: `An error occurred during the Libris import process:\n\n${errorMessage}\n\n${JSON.stringify(result.recordsArray)}`,
+					text: `An error occurred during the Libris import process:\n\n${result.message}\n\n${JSON.stringify(result.recordsArray)}`,
 				};
 				await transporter.sendMail(mailOptions);
 
