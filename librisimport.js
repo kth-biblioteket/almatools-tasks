@@ -17,7 +17,7 @@ const main = async (fromDate, toDate) => {
 
         if (!result.collection.record) {
             console.error("❌ Inga records hittades i XML-filen.");
-            return;
+            return { status: "no_records" };
         }
 
         const recordsArray = Array.isArray(result.collection.record) ? result.collection.record : [result.collection.record];
@@ -26,8 +26,11 @@ const main = async (fromDate, toDate) => {
             await processRecord(record);
             console.log("------------------------------------------------");
         }
+
+        return { status: "success" }
     } catch (error) {
         console.error("❌ Ett fel uppstod:", error);
+        return { status: "error", message: error.message, recordsArray: recordsArray };
     }
 };
 
