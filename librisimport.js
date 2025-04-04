@@ -43,8 +43,16 @@ async function processRecord(record) {
 
     // Kör endast om holdings finns
     if (holdingsExists) {
-        const controlFieldValue = getControlFieldValue(record);
-        console.log("📌 bib_id:", controlFieldValue);
+        //Hämta typ
+        const controlFieldValue_type = getControlFieldValue(record, '008');
+        console.log("📌 Type:", controlFieldValue_type.substring(24,25));
+        if(controlFieldValue_type.substring(24,25) === 'm') {
+            console.log("✅ TYP ÄR THESIS");
+        }
+
+        //Hämta bib_id
+        const controlFieldValue_id = getControlFieldValue(record, '001');
+        console.log("📌 bib_id:", controlFieldValue_id);
 
         const librisType = await getLibrisType(controlFieldValue)
         console.log("📌 libris_type:", librisType);
@@ -52,9 +60,12 @@ async function processRecord(record) {
         const other_system_number = getOtherSystemNumber(record, controlFieldValue);
         console.log("📌 other_system_number:", other_system_number);
 
-        // Kör bara om typen är Thesis "https://id.kb.se/marc/Thesis"
-        // Utöka till övriga senare
-        if(librisType=="https://id.kb.se/marc/Thesis") {
+        // Kör bara om typen är Thesis 
+        // I json-ld: "https://id.kb.se/marc/Thesis"
+        // I marc: 008-24 = 'm'
+        // Utöka till övriga senare?
+        //if(librisType=="https://id.kb.se/marc/Thesis") {
+        if(controlFieldValue_type.substring(24,25) === 'm') {
             // Kör bara om record inte finns i Alma
             // Uppdateringar hanteras i senare version
             const recordIdentifier = await checkIfExistsAlma(other_system_number);
@@ -125,10 +136,11 @@ async function getLibrisType(bib_id) {
 /**
  * 
  * @param {*} record 
+ * @param {*} tag 
  * @returns 
  */
-function getControlFieldValue(record) {
-    const controlField = record.controlfield.find((field) => field.$.tag === "001");
+function getControlFieldValue(record, tag) {
+    const controlField = record.controlfield.find((field) => field.$.tag === tag);
     return controlField ? controlField._ : null;
 }
 
