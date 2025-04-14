@@ -222,7 +222,7 @@ async function createAlmaRecords(record, holdingsXml) {
         return;
     }
 
-    logger.info("✅ Bib skapad i Alma:", bibId);
+    logger.info(`✅ Bib skapad i Alma: ${bibId}`);
 
     const holdingsId = await createAlmaHoldings(bibId, holdingsXml);
     if (!holdingsId) {
