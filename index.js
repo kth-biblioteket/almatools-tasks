@@ -11,6 +11,7 @@ const hbs = require('nodemailer-express-handlebars')
 const ftp = require('basic-ftp');
 const archiver = require('archiver');
 var parseString = require('xml2js').parseString;
+const logger = require('./logger');
 
 var appath = "./";
 
@@ -801,7 +802,7 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 	cron.schedule(process.env.CRON_LIBRISIMPORT, async () => {
 
 		if (isRunning) {
-			console.log("❌ Hoppa över: Det körs redan en import.");
+			logger.warn("❌ Hoppa över: Det körs redan en import.");
 			return;
 		}
 
@@ -810,7 +811,7 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 			const lastUntilTime = await getLastUntilTime();
 			const nowTime = new Date().toISOString().split('.')[0];
 
-			console.log(`Running librisimport from ${lastUntilTime} to ${nowTime}`);
+			logger.info(`Running librisimport from ${lastUntilTime} to ${nowTime}`);
 
 			const result = await librisimport.main(lastUntilTime, nowTime);
 

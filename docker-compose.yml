@@ -10,6 +10,7 @@ services:
     env_file:
       - almatools-tasks.env
     volumes:
+      - "./logs:/app/logs"
       - "./lastuntiltime.txt:/app/lastuntiltime.txt"
     networks:
       - "apps-net"

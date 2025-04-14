@@ -4,6 +4,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const xml2js = require('xml2js');
+const logger = require('./logger');
 
 /**
  * 
@@ -17,7 +18,7 @@ const main = async (fromDate, toDate) => {
         const result = await parseXml(response);
 
         if (!result.collection.record) {
-            console.error("❌ Inga records hittades i XML-filen.");
+            logger.warn("❌ Inga records hittades i XML-filen.");
             return { status: "no_records" };
         }
 
@@ -25,12 +26,12 @@ const main = async (fromDate, toDate) => {
 
         for (const record of recordsArray) {
             await processRecord(record);
-            console.log("------------------------------------------------");
+            logger.info("------------------------------------------------");
         }
 
         return { status: "success" }
     } catch (error) {
-        console.error("❌ Ett fel uppstod:", error);
+        logger.error("❌ Ett fel uppstod:", error);
         return { status: "error", message: error.message, recordsArray: recordsArray };
     }
 };
@@ -40,7 +41,7 @@ const main = async (fromDate, toDate) => {
  * @param {*} record 
  */
 async function processRecord(record) {
-    console.log("➡ Sammanslagen post");
+    logger.info("➡ Sammanslagen post");
 
     const holdings = getHoldingsXml(record);
     const holdingsExists = holdings !== null;
@@ -49,41 +50,70 @@ async function processRecord(record) {
     if (holdingsExists) {
         //Hämta typ
         const controlFieldValue_type = getControlFieldValue(record, '008');
-        console.log("📌 Type:", controlFieldValue_type.substring(24,25));
+        logger.info("📌 Type:", controlFieldValue_type.substring(24,25));
         if(controlFieldValue_type.substring(24,25) === 'm') {
-            console.log("✅ TYP ÄR THESIS");
+            logger.info("✅ TYP ÄR THESIS");
         }
 
         //Hämta bib_id
         const controlFieldValue_id = getControlFieldValue(record, '001');
-        console.log("📌 bib_id:", controlFieldValue_id);
+        logger.info("📌 bib_id:", controlFieldValue_id);
 
         //const librisType = await getLibrisType(controlFieldValue_id)
         //console.log("📌 libris_type:", librisType);
 
         const other_system_number = getOtherSystemNumber(record, controlFieldValue_id);
-        console.log("📌 other_system_number:", other_system_number);
+        logger.info("📌 other_system_number:", other_system_number);
 
-        // Kör bara om typen är Thesis 
-        // I json-ld: "https://id.kb.se/marc/Thesis"
-        // I marc: 008-24 = 'm'
+        // MARC 008/24
+        // 24 - Nature of entire work (006/07)
+        // # - Not specified
+        // a - Abstracts/summaries
+        // b - Bibliographies
+        // c - Catalogs
+        // d - Dictionaries
+        // e - Encyclopedias
+        // f - Handbooks
+        // g - Legal articles
+        // h - Biography
+        // i - Indexes
+        // k - Discographies
+        // l - Legislation
+        // m - Theses
+        // n - Surveys of literature in a subject area
+        // o - Reviews
+        // p - Programmed texts
+        // q - Filmographies
+        // r - Directories
+        // s - Statistics
+        // t - Technical reports
+        // u - Standards/specifications
+        // v - Legal cases and case notes
+        // w - Law reports and digests
+        // y - Yearbooks
+        // z - Treaties
+        // 5 - Calendars
+        // 6 - Comics/graphic novels
+        // | - No attempt to code
+
+        // Kör bara om typen är Thesis
         // Utöka till övriga senare?
-        //if(librisType=="https://id.kb.se/marc/Thesis") {
         if(controlFieldValue_type.substring(24,25) === 'm') {
             // Kör bara om record inte finns i Alma
             // Uppdateringar hanteras i senare version
             const recordIdentifier = await checkIfExistsAlma(other_system_number);
             if (recordIdentifier) {
-                console.log("✅ Bibliografisk post finns i Alma:", recordIdentifier);
+                logger.info("✅ Bibliografisk post finns i Alma:", recordIdentifier);
             } else {
-                console.log("❌ Bibliografisk post finns inte i Alma, importera post!");
+                logger.info("❌ Bibliografisk post finns inte i Alma, importera post!");
                 await createAlmaRecords(record, holdings);
             }
         } else {
-            console.log("⚠ Libristyp är inte avhandling(Thesis)");
+            //Hantera andra typer
+            logger.info("⚠ Libristyp är inte avhandling(Thesis)");
         }
     } else {
-        console.log("⚠ Holdings saknas i Libris.");
+        logger.info("⚠ Holdings saknas i Libris.");
     }
 }
 
@@ -115,6 +145,7 @@ async function getLibrisUpdates(filePath, fromDate, toDate) {
 
         return await makeHttpRequest(options, data);
     } catch (error) {
+        logger.error("❌ Misslyckades att hämta Librisuppdateringar:", error);
         throw new Error(`Failed to get Libris updates: ${error}`);
     }
 }
@@ -187,27 +218,27 @@ async function createAlmaRecords(record, holdingsXml) {
 
     const bibId = await createAlmaBib(xmlRecord);
     if (!bibId) {
-        console.log("❌ Bib kunde inte skapas.");
+        logger.error("❌ Bib kunde inte skapas.");
         return;
     }
 
-    console.log("✅ Bib skapad i Alma:", bibId);
+    logger.info("✅ Bib skapad i Alma:", bibId);
 
     const holdingsId = await createAlmaHoldings(bibId, holdingsXml);
     if (!holdingsId) {
-        console.log("❌ Holding kunde inte skapas.");
+        logger.error("❌ Holding kunde inte skapas.");
         return;
     }
 
-    console.log("✅ Holding skapad i Alma:", holdingsId);
+    logger.info("✅ Holding skapad i Alma:", holdingsId);
 
     const itemXml = buildItemXml();
     const itemId = await createAlmaItem(bibId, holdingsId, itemXml);
 
     if (itemId) {
-        console.log("✅ Item skapad i Alma:", itemId);
+        logger.info("✅ Item skapad i Alma:", itemId);
     } else {
-        console.log("❌ Item kunde inte skapas.");
+        logger.error("❌ Item kunde inte skapas.");
     }
 }
 
@@ -376,6 +407,9 @@ async function parseXml(xmlString) {
  * 
  * @param {*} controlFieldValue 
  * @returns 
+ * 
+ * Använder almas SRU
+ * https://developers.exlibrisgroup.com/blog/how-to-configure-the-sru-integration-profile-and-structure-sru-retrieval-queries/
  */
 async function checkIfExistsAlma(controlFieldValue) {
     const hostname = process.env.ALMA_SRU_HOSTNAME;
