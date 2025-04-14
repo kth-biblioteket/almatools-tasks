@@ -447,6 +447,7 @@ async function createAlmaRecord(path, record) {
         return await parseXml(response);
     } catch (err) {
         console.error(err);
+        logger.error(`❌ createAlmaRecord error: ${err}`);
         return false;
     }
 }
