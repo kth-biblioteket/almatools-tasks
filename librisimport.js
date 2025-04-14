@@ -31,7 +31,7 @@ const main = async (fromDate, toDate) => {
 
         return { status: "success" }
     } catch (error) {
-        logger.error("❌ Ett fel uppstod:", error);
+        logger.error(`❌ Ett fel uppstod: ${error}`);
         return { status: "error", message: error.message, recordsArray: recordsArray };
     }
 };
@@ -50,20 +50,20 @@ async function processRecord(record) {
     if (holdingsExists) {
         //Hämta typ
         const controlFieldValue_type = getControlFieldValue(record, '008');
-        logger.info("📌 Type:", controlFieldValue_type.substring(24,25));
+        logger.info(`📌 Type: ${controlFieldValue_type.substring(24,25)}`);
         if(controlFieldValue_type.substring(24,25) === 'm') {
             logger.info("✅ TYP ÄR THESIS");
         }
 
         //Hämta bib_id
         const controlFieldValue_id = getControlFieldValue(record, '001');
-        logger.info("📌 bib_id:", controlFieldValue_id);
+        logger.info(`📌 bib_id: ${controlFieldValue_id}`);
 
         //const librisType = await getLibrisType(controlFieldValue_id)
         //console.log("📌 libris_type:", librisType);
 
         const other_system_number = getOtherSystemNumber(record, controlFieldValue_id);
-        logger.info("📌 other_system_number:", other_system_number);
+        logger.info(`📌 other_system_number: ${other_system_number}`);
 
         // MARC 008/24
         // 24 - Nature of entire work (006/07)
@@ -103,7 +103,7 @@ async function processRecord(record) {
             // Uppdateringar hanteras i senare version
             const recordIdentifier = await checkIfExistsAlma(other_system_number);
             if (recordIdentifier) {
-                logger.info("✅ Bibliografisk post finns i Alma:", recordIdentifier);
+                logger.info(`✅ Bibliografisk post finns i Alma: ${recordIdentifier}`);
             } else {
                 logger.info("❌ Bibliografisk post finns inte i Alma, importera post!");
                 await createAlmaRecords(record, holdings);
@@ -145,7 +145,7 @@ async function getLibrisUpdates(filePath, fromDate, toDate) {
 
         return await makeHttpRequest(options, data);
     } catch (error) {
-        logger.error("❌ Misslyckades att hämta Librisuppdateringar:", error);
+        logger.error(`❌ Misslyckades att hämta Librisuppdateringar: ${error}`);
         throw new Error(`Failed to get Libris updates: ${error}`);
     }
 }
@@ -230,13 +230,13 @@ async function createAlmaRecords(record, holdingsXml) {
         return;
     }
 
-    logger.info("✅ Holding skapad i Alma:", holdingsId);
+    logger.info(`✅ Holding skapad i Alma: ${holdingsId}`);
 
     const itemXml = buildItemXml();
     const itemId = await createAlmaItem(bibId, holdingsId, itemXml);
 
     if (itemId) {
-        logger.info("✅ Item skapad i Alma:", itemId);
+        logger.info(`✅ Item skapad i Alma: ${itemId}`);
     } else {
         logger.error("❌ Item kunde inte skapas.");
     }
