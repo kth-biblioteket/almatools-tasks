@@ -3,7 +3,13 @@
 
 ##
 
-###
+### Libris Integration
+
+- Sök i alma efter borrowing requests
+https://eu01-psb.alma.exlibrisgroup.com/view/sru/46KTH_INST?version=1.2&operation=searchRetrieve&recordSchema=marcxml&query=alma.permanentPhysicalLocation=%22OUT_RS_REQ%22%20AND%20alma.title=ankor
+
+https://eu01-psb.alma.exlibrisgroup.com/view/sru/46KTH_INST?version=1.2&operation=searchRetrieve&recordSchema=marcxml&query=alma.permanentPhysicalLocation=%22OUT_RS_REQ%22%20AND%20(alma.isbn=9783753302980%20OR%20alma.title=%22Pingvinerna%22)
+
 
 
 #### Dependencies
