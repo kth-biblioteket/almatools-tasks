@@ -10,3 +10,4 @@ Dockerfile-dev
 docker-compose-dev.yml
 package-dev.json
 test*.*
+logs/*.json
