@@ -831,9 +831,10 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 				};
 				await transporter.sendMail(mailOptions);
 
+			} else {
+				// Allt gick bra, uppdatera lastUntilTime
+				await updateLastUntilTime(nowTime);
 			}
-
-			await updateLastUntilTime(nowTime);
 
 		} catch (error) {
 			console.error("Error in cron job:", error);

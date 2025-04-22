@@ -11,3 +11,5 @@ docker-compose-dev.yml
 package-dev.json
 test*.*
 logs/*.json
+marc.export
+export.marc
