@@ -223,6 +223,7 @@ async function createAlmaRecords(record, holdingsXml) {
     }
 
     logger.info(`✅ Bib skapad i Alma: ${bibId}`);
+    logger.info(xmlRecord);
 
     const holdingsId = await createAlmaHoldings(bibId, holdingsXml);
     if (!holdingsId) {
@@ -231,12 +232,14 @@ async function createAlmaRecords(record, holdingsXml) {
     }
 
     logger.info(`✅ Holding skapad i Alma: ${holdingsId}`);
+    logger.info(holdingsXml);
 
     const itemXml = buildItemXml();
     const itemId = await createAlmaItem(bibId, holdingsId, itemXml);
 
     if (itemId) {
         logger.info(`✅ Item skapad i Alma: ${itemId}`);
+        logger.info(itemXml);
     } else {
         logger.error("❌ Item kunde inte skapas.");
     }
@@ -284,15 +287,15 @@ function buildHoldingsXml(dataField) {
                      <controlfield tag="008">1011252u####8###4001uueng0000000</controlfield>
                      <datafield tag="852" ind1="${dataField.ind1}" ind2="${dataField.ind2}">`;
 
+    const codeB = dataField.subfields.find((sub) => sub.code === "b");
+    if (codeB) {
+        xml += getLibraryCode(codeB.value);
+    }
+    
     const codeH = dataField.subfields.find((sub) => sub.code === "h");
     if (codeH) {
         xml += `<subfield code="h">${codeH.value}</subfield>`;
         xml += getLocationCode(codeH.value);
-    }
-
-    const codeB = dataField.subfields.find((sub) => sub.code === "b");
-    if (codeB) {
-        xml += getLibraryCode(codeB.value);
     }
 
     const codeJ = dataField.subfields.find((sub) => sub.code === "j");
