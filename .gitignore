@@ -13,3 +13,4 @@ test*.*
 logs/*.json
 marc.export
 export.marc
+test.jsonld

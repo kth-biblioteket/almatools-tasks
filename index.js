@@ -829,7 +829,12 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 					subject: "🚨 LibrisImport Failed",
 					text: `An error occurred during the Libris import process:\n\n${result.message}\n\n${JSON.stringify(result.recordsArray)}`,
 				};
-				await transporter.sendMail(mailOptions);
+				logger.error("❌", mailOptions.text);
+
+				if(process.env.SEND_ERROR_MAIL === 'true') {
+					await transporter.sendMail(mailOptions);
+				}
+				
 
 			} else {
 				// Allt gick bra, uppdatera lastUntilTime
