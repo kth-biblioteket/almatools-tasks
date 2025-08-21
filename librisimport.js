@@ -318,8 +318,9 @@ async function createAlmaRecords(record, holdingsXml, bibExistsInAlma, type) {
         ///////////////////////
         // Skapa Item        //
         ///////////////////////
-        logger.info(`✅ Skapa Item i Alma, xmlRecord: ${itemXml}`);
+        
         const itemXml = buildItemXml(type, '14_90_days');
+        logger.info(`✅ Skapa Item i Alma, xmlRecord: ${itemXml}`);
         const itemId = await createAlmaItem(mmsId, holdingsId, itemXml);
 
         if (!itemId) {
