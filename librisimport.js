@@ -417,8 +417,8 @@ function buildHoldingsXml(dataField) {
     // Delfält h - hyllkod och c - placering //
     const codeH = dataField.subfields.find((sub) => sub.code === "h");
     if (codeH) {
-        xml += `<subfield code="h">${codeH.value}</subfield>`;
         xml += getLocationCode(codeH.value);
+        xml += `<subfield code="h">${codeH.value}</subfield>`;
     }
     
     // Delfält j - löpnummer //

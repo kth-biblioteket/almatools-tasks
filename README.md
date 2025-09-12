@@ -7,17 +7,26 @@
 ### Libris Integration
 
 Varje minut körs en task som hämtar poster som uppdaterats/skapats i Libris.
-Posten skapas sedan i Alma.
+Detta gäller avhandlingar(theis) samt inköpta böcker.
+En avhandling importeras alltid när den skapats i Libris
+En bok importeras bara om holdingsposten har värdet 1 i "katalogisatörens anmärkning" på komponentnivå
+
+Posten skapas i Alma.
  - Bib
+ För Avhandlingar skapas också
  - Holding
  - Item
+
+ För inköpta böcker skapas en PO-Line som i sin tur skapar
+  - Holding
+  - Item
+Holdingsposten uppdateras med data från Libris.
 
 
 Sök i alma efter borrowing requests
 https://eu01-psb.alma.exlibrisgroup.com/view/sru/46KTH_INST?version=1.2&operation=searchRetrieve&recordSchema=marcxml&query=alma.permanentPhysicalLocation=%22OUT_RS_REQ%22%20AND%20alma.title=ankor
 
 https://eu01-psb.alma.exlibrisgroup.com/view/sru/46KTH_INST?version=1.2&operation=searchRetrieve&recordSchema=marcxml&query=alma.permanentPhysicalLocation=%22OUT_RS_REQ%22%20AND%20(alma.isbn=9783753302980%20OR%20alma.title=%22Pingvinerna%22)
-
 
 
 #### Dependencies
@@ -64,6 +73,13 @@ MAILFROM_SUBJECT_SV=
 MAILFROM_SUBJECT_EN=
 LDAP_USER=sys-bibliometri@ug.kth.se
 LDAP_PWD="xxxxxxxx"
+
+CLIENT_ID=xxxxx
+CLIENT_SECRET=xxxxxxxxxxxx
+GRANT_TYPE=client_credentials
+LIBRIS_AUTH_HOSTNAME=login-stg.libris.kb.se
+LIBRIS_API_URL=https://libris-qa.kb.se/
+
 LIBRIS_HOSTNAME=libris.kb.se
 ALMA_SRU_HOSTNAME=eu01-psb.alma.exlibrisgroup.com
 ALMA_API_HOSTNAME=api-eu.hosted.exlibrisgroup.com
