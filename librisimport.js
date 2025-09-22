@@ -442,17 +442,17 @@ function buildHoldingsXml(dataField) {
  * @param {*} value 
  * @returns 
  * 
- * sgd = 001 - 515-2433
- * ngd = 515.352 - 793.74 och 900-910.2
+ * sgd = 001 - 515.352
+ * ngd = 515.353 - 793.74 och 900-910.2
  * hbd08 = 800-802
  */
 function getLocationCode(value) {
     const numericValue = parseFloat(value);
     if (!isNaN(numericValue)) {
-        if (numericValue >= 1 && numericValue <= 515.2433) {
+        if (numericValue >= 1 && numericValue <= 515.352) {
             return `<subfield code="c">sgd</subfield>`;
         }
-        if ((numericValue >= 515.352 && numericValue <= 793.74) || (numericValue >= 900 && numericValue <= 910.2)) {
+        if ((numericValue >= 515.353 && numericValue <= 793.74) || (numericValue >= 900 && numericValue <= 910.2)) {
             return `<subfield code="c">ngd</subfield>`;
         }
         if (numericValue >= 800 && numericValue <= 802) {
