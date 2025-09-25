@@ -28,7 +28,44 @@ https://eu01-psb.alma.exlibrisgroup.com/view/sru/46KTH_INST?version=1.2&operatio
 
 https://eu01-psb.alma.exlibrisgroup.com/view/sru/46KTH_INST?version=1.2&operation=searchRetrieve&recordSchema=marcxml&query=alma.permanentPhysicalLocation=%22OUT_RS_REQ%22%20AND%20(alma.isbn=9783753302980%20OR%20alma.title=%22Pingvinerna%22)
 
+https://developers.exlibrisgroup.com/blog/how-to-configure-the-sru-integration-profile-and-structure-sru-retrieval-queries/
 
+Locations:
+* sgd = 001 - 515.352
+* ngd = 515.353 - 793.74 och 900-910.2
+* hbd08 = 800-802
+
+// MARC 008/24
+    // 24 - Nature of entire work (006/07)
+    // # - Not specified
+    // a - Abstracts/summaries
+    // b - Bibliographies
+    // c - Catalogs
+    // d - Dictionaries
+    // e - Encyclopedias
+    // f - Handbooks
+    // g - Legal articles
+    // h - Biography
+    // i - Indexes
+    // k - Discographies
+    // l - Legislation
+    // m - Theses
+    // n - Surveys of literature in a subject area
+    // o - Reviews
+    // p - Programmed texts
+    // q - Filmographies
+    // r - Directories
+    // s - Statistics
+    // t - Technical reports
+    // u - Standards/specifications
+    // v - Legal cases and case notes
+    // w - Law reports and digests
+    // y - Yearbooks
+    // z - Treaties
+    // 5 - Calendars
+    // 6 - Comics/graphic novels
+    // | - No attempt to code
+    
 #### Dependencies
 
 Node 16.17.0

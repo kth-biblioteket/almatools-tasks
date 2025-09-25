@@ -792,6 +792,7 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 	async function updateLastUntilTime(time) {
 		try {
 			await fspromises.writeFile(LAST_UNTIL_FILE, time, "utf-8");
+			logger.info("Updated lastUntilTime to:", time);
 		} catch (error) {
 			console.error("Error saving lastUntilTime:", error);
 		}
@@ -844,6 +845,7 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 		} catch (error) {
 			console.error("Error in cron job:", error);
 		} finally {
+			logger.info(`Running librisimport finished`);
 			isRunning = false;
 		}
 	});
