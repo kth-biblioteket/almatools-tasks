@@ -604,7 +604,7 @@ async function processRecord(record) {
                 logger.info(`✅ Bibliografisk post för THESIS finns i Alma: ${bibExistsInAlma}`);
             } else {
                 logger.info("❌ Bibliografisk post för THESIS finns inte i Alma, importera post!");
-                const createResult = await createAlmaRecords(record, holdings, bibExistsInAlma, 'THESIS');
+                const createResult = await createAlmaRecords(record, holdingsXml, bibExistsInAlma, 'THESIS');
                 if (createResult) {
                     logger.info("✅ Thesis skapad i Alma");
                 } else {
