@@ -17,9 +17,9 @@ function ensureFailedLibrisRecordsTable() {
 
     db.query(createTableQuery, (err, result) => {
         if (err) {
-            console.error('❌ Kunde inte skapa libris_import_failed_records-tabellen', err);
+            logger.error('❌ Kunde inte skapa libris_import_failed_records-tabellen', err);
         } else {
-            console.log('✅ Tabell libris_import_failed_records är klar');
+            logger.info('✅ Tabell libris_import_failed_records är klar');
         }
     });
 }
@@ -28,6 +28,8 @@ function ensureFailedLibrisRecordsTable() {
 ensureFailedLibrisRecordsTable();
 
 async function retryFailedLibrisRecords() {
+
+    logger.info('ℹ️ Konrollerar om det finns misslyckade libris-poster...');
 
     //Antal max försök per post(justerbart via env)
     const maxAttempts = parseInt(process.env.LIBRISIMPORT_FAIL_MAX_ATTEMPTS, 10) || 5;
@@ -51,7 +53,7 @@ async function retryFailedLibrisRecords() {
                 logger.info(`✅ Retry lyckades, librisId: ${librisId}`);
             } catch (err) {
                 db.query('UPDATE libris_import_failed_records SET attempts = attempts + 1, last_attempt = NOW() WHERE id = ?', [row.id]);
-                logger.warn(`⚠ Retry misslyckades, librisId: ${librisId}, fel: ${err.message}`);
+                logger.warn(`❌ Retry misslyckades, librisId: ${librisId}, fel: ${err.message}`);
             }
         }
     });
