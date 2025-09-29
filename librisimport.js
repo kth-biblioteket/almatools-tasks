@@ -694,7 +694,7 @@ async function createAlmaPoLine(mms_id, po_line_object) {
         const response = await makeHttpRequest(options, po_line_object);
         const result = await parseXml(response.body);
         return result || false;
-    } catch (err) {s
+    } catch (err) {
         console.error(err);
         console.error(po_line_object);
         logger.error(`❌ createAlmaPoline error: ${err} ${po_line_object}`);
