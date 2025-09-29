@@ -12,7 +12,8 @@ function ensureFailedLibrisRecordsTable() {
       record_type VARCHAR(20),
       record LONGTEXT,
       attempts INT DEFAULT 0,
-      last_attempt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      last_attempt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      mail_sent TINYINT(1) DEFAULT 0
     )
   `;
 
@@ -45,26 +46,31 @@ async function retryFailedLibrisRecords() {
             const attempts = row.attempts;
 
             if (attempts >= maxAttempts) {
-                // 🚨 Max försök nådda → skicka felmail
-                const mailOptions = {
-                    from: process.env.MAILFROM_ADDRESS,
-                    to: process.env.MAIL_ERROR_TO_ADDRESS,
-                    subject: `🚨 LibrisImport Max Attempts uppnådd för ${librisId}`,
-                    text: `Posten med LibrisId ${librisId} (typ: ${type}) har misslyckats ${attempts} gånger och kommer inte längre att bearbetas.\n\nRecord:\n${record}`
-                };
-                logger.error("❌ Max attempts nådda:", mailOptions.text);
+                if (row.mail_sent === 0) {
+                    // 🚨 Max försök nådda → skicka felmail
+                    const mailOptions = {
+                        from: process.env.MAILFROM_ADDRESS,
+                        to: process.env.MAIL_ERROR_TO_ADDRESS,
+                        subject: `🚨 LibrisImport Max Attempts uppnådd för ${librisId}`,
+                        text: `Posten med LibrisId ${librisId} (typ: ${type}) har misslyckats ${attempts} gånger och kommer inte längre att bearbetas.\n\nRecord:\n${record}`
+                    };
+                    logger.error("❌ Max attempts nådda:", mailOptions.text);
 
-                if (process.env.SEND_ERROR_MAIL === 'true') {
-                    try {
-                        const transporter = nodemailer.createTransport({
-                            port: 25,
-                            host: process.env.SMTP_HOST,
-                            tls: { rejectUnauthorized: false }
-                        });
-                        await transporter.sendMail(mailOptions);
-                        logger.info(`📧 Skickade mail för max attempts: ${librisId}`);
-                    } catch (mailErr) {
-                        logger.error(`❌ Kunde inte skicka mail för ${librisId}: ${mailErr.message}`);
+                    if (process.env.SEND_ERROR_MAIL === 'true') {
+                        try {
+                            const transporter = nodemailer.createTransport({
+                                port: 25,
+                                host: process.env.SMTP_HOST,
+                                tls: { rejectUnauthorized: false }
+                            });
+                            await transporter.sendMail(mailOptions);
+                            logger.info(`📧 Skickade mail för max attempts: ${librisId}`);
+
+                            // Markera att mail har skickats
+                            db.query('UPDATE libris_import_failed_records SET mail_sent = 1 WHERE id = ?', [row.id]);
+                        } catch (mailErr) {
+                            logger.error(`❌ Kunde inte skicka mail för ${librisId}: ${mailErr.message}`);
+                        }
                     }
                 }
 
