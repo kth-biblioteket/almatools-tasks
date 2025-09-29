@@ -124,19 +124,19 @@ function getLibraryCode(value) {
 async function makeHttpRequest(options, body = null, timeoutMs = parseInt(process.env.HTTP_TIMEOUT_MS, 10) || 5000) {
     return new Promise((resolve, reject) => {
         const startTime = Date.now();
-        logger.info(`➡️ Starting HTTP request to https://${options.hostname}${options.path}`);
+        logger.debug(`➡️ Starting HTTP request to https://${options.hostname}${options.path}`);
 
         const req = https.request(options, (res) => {
             let data = '';
 
-            logger.info(`📡 Connected. Status code: ${res.statusCode}`);
+            logger.debug(`📡 Connected. Status code: ${res.statusCode}`);
             res.on('data', (chunk) => {
                 data += chunk;
             });
 
             res.on('end', () => {
                 const duration = Date.now() - startTime;
-                logger.info(`✅ Request ended in ${duration}ms`);
+                logger.debug(`✅ Request ended in ${duration}ms`);
                 if (res.statusCode === 200 || res.statusCode === 204) {
                     resolve({
                         headers: res.headers,
@@ -151,15 +151,15 @@ async function makeHttpRequest(options, body = null, timeoutMs = parseInt(proces
 
         req.on('socket', (socket) => {
             socket.on('lookup', (err, address, family, host) => {
-                logger.info(`🔍 DNS lookup for ${host} -> ${address} (IPv${family})`);
+                logger.debug(`🔍 DNS lookup for ${host} -> ${address} (IPv${family})`);
             });
 
             socket.on('connect', () => {
-                logger.info('🔌 TCP connection established');
+                logger.debug('🔌 TCP connection established');
             });
 
             socket.on('secureConnect', () => {
-                logger.info('🔒 TLS handshake completed');
+                logger.debug('🔒 TLS handshake completed');
             });
         });
 

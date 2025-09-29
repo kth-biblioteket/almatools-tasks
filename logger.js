@@ -1,9 +1,13 @@
+require('dotenv').config({path:'almatools-tasks.env'})
+
 const winston = require('winston');
 require('winston-daily-rotate-file');
 
 const path = require('path');
 
 const logDir = path.resolve(__dirname, 'logs');
+
+const level = process.env.LOG_LEVEL || 'info';
 
 const infoTransport = new winston.transports.DailyRotateFile({
     filename: 'app-%DATE%.log',
@@ -26,7 +30,7 @@ const errorTransport = new winston.transports.DailyRotateFile({
 
 
 const consoleTransport = new winston.transports.Console({
-    level: 'debug',
+    level: level,
     format: winston.format.combine(
         winston.format.colorize(),
         winston.format.simple()
@@ -34,7 +38,7 @@ const consoleTransport = new winston.transports.Console({
 });
 
 const logger = winston.createLogger({
-    level: 'info',
+    level: level,
     format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.printf(({ timestamp, level, message }) => {
