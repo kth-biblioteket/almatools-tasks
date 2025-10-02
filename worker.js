@@ -11,9 +11,11 @@ function ensureFailedLibrisRecordsTable() {
       libris_id VARCHAR(50),
       record_type VARCHAR(20),
       record LONGTEXT,
+      error_message TEXT,
       attempts INT DEFAULT 0,
       last_attempt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      mail_sent TINYINT(1) DEFAULT 0
+      mail_sent TINYINT(1) DEFAULT 0,
+      status ENUM('failed','success','max_attempts') DEFAULT 'failed'
     )
   `;
 
@@ -36,7 +38,8 @@ async function retryFailedLibrisRecords() {
     //Antal max försök per post(justerbart via env)
     const maxAttempts = parseInt(process.env.LIBRISIMPORT_FAIL_MAX_ATTEMPTS, 10) || 5;
 
-    db.query('SELECT * FROM libris_import_failed_records', async (err, results) => {
+    db.query('SELECT * FROM libris_import_failed_records WHERE status="failed"', async (err, results) => {
+    //db.query('SELECT * FROM libris_import_failed_records', async (err, results) => {
         if (err) return logger.error('❌ Fel vid hämtning av misslyckade poster', err);
 
         for (const row of results) {
@@ -47,16 +50,15 @@ async function retryFailedLibrisRecords() {
 
             if (attempts >= maxAttempts) {
                 if (row.mail_sent === 0) {
-                    // 🚨 Max försök nådda → skicka felmail
-                    const mailOptions = {
-                        from: process.env.MAILFROM_ADDRESS,
-                        to: process.env.MAIL_ERROR_TO_ADDRESS,
-                        subject: `🚨 LibrisImport Max Attempts uppnådd för ${librisId}`,
-                        text: `Posten med LibrisId ${librisId} (typ: ${type}) har misslyckats ${attempts} gånger och kommer inte längre att bearbetas.\n\nRecord:\n${record}`
-                    };
-                    logger.error("❌ Max attempts nådda:", mailOptions.text);
-
                     if (process.env.SEND_ERROR_MAIL === 'true') {
+                        // 🚨 Max försök nådda → skicka felmail
+                        const mailOptions = {
+                            from: process.env.MAILFROM_ADDRESS,
+                            to: process.env.MAIL_ERROR_TO_ADDRESS,
+                            subject: `🚨 LibrisImport Max Attempts uppnådd för ${librisId}`,
+                            text: `Posten med LibrisId ${librisId} (typ: ${type}) har misslyckats ${attempts} gånger och kommer inte längre att bearbetas.\n\nRecord:\n${record}`
+                        };
+                        logger.error("❌ Max attempts nådda:", mailOptions.text);
                         try {
                             const transporter = nodemailer.createTransport({
                                 port: 25,
@@ -67,7 +69,7 @@ async function retryFailedLibrisRecords() {
                             logger.info(`📧 Skickade mail för max attempts: ${librisId}`);
 
                             // Markera att mail har skickats
-                            db.query('UPDATE libris_import_failed_records SET mail_sent = 1 WHERE id = ?', [row.id]);
+                            db.query('UPDATE libris_import_failed_records SET mail_sent = 1, status = "max_attempts" WHERE id = ?', [row.id]);
                         } catch (mailErr) {
                             logger.error(`❌ Kunde inte skicka mail för ${librisId}: ${mailErr.message}`);
                         }
@@ -83,12 +85,15 @@ async function retryFailedLibrisRecords() {
 
                 await processRecord(recordObj);
 
-                db.query('DELETE FROM libris_import_failed_records WHERE id = ?', [row.id]);
-                logger.info(`✅ Retry lyckades, librisId: ${librisId}`);
+                db.query(
+                    'UPDATE libris_import_failed_records SET attempts = attempts + 1, last_attempt = NOW(), error_message = "", status = "success" WHERE id = ?',
+                    [row.id]
+                );
+                logger.info(`✅ Retry lyckades och markerad som hanterad, librisId: ${librisId}`);
             } catch (err) {
                 db.query(
-                    'UPDATE libris_import_failed_records SET attempts = attempts + 1, last_attempt = NOW() WHERE id = ?',
-                    [row.id]
+                    'UPDATE libris_import_failed_records SET attempts = attempts + 1, last_attempt = NOW(), error_message = ? WHERE id = ?',
+                    [err.message, row.id]
                 );
                 logger.warn(`❌ Retry misslyckades, librisId: ${librisId}, fel: ${err.message}`);
             }

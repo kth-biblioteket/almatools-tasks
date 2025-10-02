@@ -314,12 +314,13 @@ async function createAlmaRecords(record, holdingsXml, bibExistsInAlma, type) {
         ////////////////////////////////////////
         logger.info("✅  Bibliografisk post finns inte i Alma, Skapa bib!");
         logger.info(`✅ xmlRecord: ${xmlRecord}`);
-        mmsId = await createAlmaBib(xmlRecord);
-        if (!mmsId) {
-            logger.error("❌ Bib kunde inte skapas.");
-            return false;
+        result = await createAlmaBib(xmlRecord);
+        if (!result.success) {
+            logger.error(`❌ Bib kunde inte skapas: ${result.error}`);
+            return { success: false, error: result.error };
         }
 
+        mmsId = result.mmsId;
         logger.info(`✅ Bib skapad i Alma mms_id: ${mmsId}`);
     } else {
         ////////////////////////////////////////
@@ -328,12 +329,13 @@ async function createAlmaRecords(record, holdingsXml, bibExistsInAlma, type) {
         mmsId = bibExistsInAlma
         logger.info(`✅ Bibliografisk post finns i Alma, uppdaterar bib mmsId: ${mmsId}`);
         logger.info(`✅ xmlRecord: ${xmlRecord}`);
-        const updatedmmsId = await updateAlmaBib(xmlRecord, mmsId);
-        if (!updatedmmsId) {
-            logger.error("❌ Bib kunde inte uppdateras.");
-            return false;
+        const result = await updateAlmaBib(xmlRecord, mmsId);
+        if (!result.success) {
+            logger.error(`❌ Bib kunde inte uppdateras: ${result.error}`);
+            return { success: false, error: result.error };
         }
-        logger.info(`✅ Bib uppdaterad i Alma mms_id: ${updatedmmsId}`);
+
+        logger.info(`✅ Bib uppdaterad i Alma mms_id: ${mmsId}`);
     }
 
     /////////////////////////////////////////////
@@ -346,14 +348,13 @@ async function createAlmaRecords(record, holdingsXml, bibExistsInAlma, type) {
         // Skapa Holding     //
         ///////////////////////
         logger.info(`✅ Skapa Holding i Alma, xmlRecord: ${holdingsXml}`);
-        const holdingsId = await createAlmaHolding(mmsId, holdingsXml);
-
-        if (!holdingsId) {
-            logger.error("❌ Holding kunde inte skapas. mmsid: " + mmsId + ", holdingsxml: " + holdingsXml);
-            return false;
+        const result = await createAlmaHolding(mmsId, holdingsXml);
+        if (!result.success) {
+            logger.error(`❌ Holding kunde inte skapas. mmsid:  ${mmsId}, holdingsxml: ${holdingsXml} + error: ${result.error}`);
+            return { success: false, error: result.error };
         }
 
-        logger.info(`✅ Holding skapad i Alma: ${holdingsId}`);
+        logger.info(`✅ Holding skapad i Alma: ${result.holdingId}`);
 
         ///////////////////////
         // Skapa Item        //
@@ -361,14 +362,15 @@ async function createAlmaRecords(record, holdingsXml, bibExistsInAlma, type) {
         
         const itemXml = buildItemXml(type, '14_90_days');
         logger.info(`✅ Skapa Item i Alma, xmlRecord: ${itemXml}`);
-        const itemId = await createAlmaItem(mmsId, holdingsId, itemXml);
+        const itemId = await createAlmaItem(mmsId, result.holdingId, itemXml);
 
-        if (!itemId) {
-            logger.error("❌ Item kunde inte skapas. mmsId:  " + mmsId + ", holdingsId: " + holdingsId + ", itemXml: " + itemXml);
-            return false;
+        if (!result.success) {
+            logger.error(`❌ Item kunde inte skapas. mmsid:  ${mmsId}, holdingsxml: ${holdingsXml}, itemXml: ${itemXml}, error: ${result.error}`);
+            return { success: false, error: result.error };
         }
+
         logger.info(`✅ Item skapad i Alma. itemId: ${itemId}`);
-        return true;
+        return { success: true };
     } else {
         /////////////////////
         // Skapa PO-Line   //
@@ -415,16 +417,16 @@ async function createAlmaRecords(record, holdingsXml, bibExistsInAlma, type) {
                 const resultUpdateAlmaHolding = await updateAlmaHolding(mmsId, holdingsXml, holdingId);
                 if (resultUpdateAlmaHolding) {
                     logger.info(`✅ Holding i Alma uppdaterad med data från Libris: ${mmsId}`);
-                    return true
+                    return { success: true };
                 } else {
                     logger.error("❌ Holding i Alma kunde inte uppdateras.");
-                    return false
+                    return { success: false, error: result.error };
                 }
         
             }
         } else {
             logger.error("❌ PO Line kunde inte skapas.");
-            return false
+            return { success: false, error: result.error };
         }
     }
 }
@@ -442,12 +444,13 @@ async function createAlmaRecord(path, record) {
     
     try {
         const response = await makeHttpRequest(options, record);
-        return parseXml(response.body);
+        const parsed = await parseXml(response.body);
+        return { success: true, parsed: parsed };
     } catch (err) {
         console.error(err);
         console.error(record);
         logger.error(`❌ createAlmaRecord error: ${err} ${record}`);
-        return false;
+        return { success: false, error: `❌ createAlmaRecord error: ${err}` };
     }
 }
 
@@ -464,12 +467,13 @@ async function updateAlmaRecord(path, record) {
     
     try {
         const response = await makeHttpRequest(options, record);
-        return parseXml(response.body);
+        const parsed = await parseXml(response.body);
+        return { success: true, parsed: parsed.parsed };
     } catch (err) {
         console.error(err);
         console.error(record);
         logger.error(`❌ updateAlmaRecord error: ${err} ${record}`);
-        return false;
+        return { success: false, error: `❌ createAlmaRecord error: ${err}` };
     }
 }
 
@@ -514,20 +518,32 @@ async function createAlmaBib(record) {
     const bibRecord = `<bib><suppress_from_publishing>false</suppress_from_publishing>${record}</bib>`;
     const path = `/almaws/v1/bibs?apikey=${process.env.ALMA_APIKEY}&validate=true&normalization=30990173100002456`;
     const result = await createAlmaRecord(path, bibRecord);
-    return result?.bib?.mms_id || false;
+    if (result.success) {
+        return { success: true, mmsId: result.parsed?.bib?.mms_id || null };
+    } else {
+        return { success: false, error: result.error };
+    }
 }
 
 async function updateAlmaBib(record, mmsId) {
     const bibRecord = `<bib><suppress_from_publishing>false</suppress_from_publishing>${record}</bib>`;
     const path = `/almaws/v1/bibs/${mmsId}?apikey=${process.env.ALMA_APIKEY}&validate=true&normalization=30990173100002456`;
     const result = await updateAlmaRecord(path, bibRecord);
-    return result?.bib?.mms_id || false;
+    if (result.success) {
+        return { success: true, mmsId: result.parsed?.bib?.mms_id || null };
+    } else {
+        return { success: false, error: result.error };
+    }
 }
 
 async function updateAlmaHolding(mms_id, record, holding_id) {
     const path = `/almaws/v1/bibs/${mms_id}/holdings/${holding_id}?apikey=${process.env.ALMA_APIKEY}`;
     const result = await updateAlmaRecord(path, record);
-    return result || false;
+    if (result.success) {
+        return { success: true, holdingId: result.parsed?.holding?.holding_id || null };
+    } else {
+        return { success: false, error: result.error };
+    }
 }
 /*
 async function updateAlmaItem(mms_id, record, holding_id) {
@@ -540,29 +556,28 @@ async function updateAlmaItem(mms_id, record, holding_id) {
 async function createAlmaHolding(mms_id, record) {
     const path = `/almaws/v1/bibs/${mms_id}/holdings?apikey=${process.env.ALMA_APIKEY}`;
     const result = await createAlmaRecord(path, record);
-    return result?.holding?.holding_id || false;
+    if (result.success) {
+        return { success: true, holdingId: result.parsed?.holding?.holding_id || null };
+    } else {
+        return { success: false, error: result.error };
+    }
 }
 
 async function createAlmaItem(mms_id, holdings_id, record) {
     const path = `/almaws/v1/bibs/${mms_id}/holdings/${holdings_id}/items?apikey=${process.env.ALMA_APIKEY}`;
     const result = await createAlmaRecord(path, record);
-    return result?.item?.item_data?.pid || false;
+    if (result.success) {
+        return { success: true, itemId: result.parsed?.item?.item_data || null };
+    } else {
+        return { success: false, error: result.error };
+    }
 }
-
-const alma = {
-    createBib: xml => createAlmaRecord(`/almaws/v1/bibs?apikey=${process.env.ALMA_APIKEY}&validate=true&normalization=30990173100002456`, `<bib><suppress_from_publishing>false</suppress_from_publishing>${xml}</bib>`),
-    updateBib: (xml, mmsId) => updateAlmaRecord(`/almaws/v1/bibs/${mmsId}?apikey=${process.env.ALMA_APIKEY}&validate=true&normalization=30990173100002456`, `<bib><suppress_from_publishing>false</suppress_from_publishing>${xml}</bib>`),
-    createHolding: (mmsId, xml) => createAlmaRecord(`/almaws/v1/bibs/${mmsId}/holdings?apikey=${process.env.ALMA_APIKEY}`, xml),
-    updateHolding: (mmsId, holdingId, xml) => updateAlmaRecord(`/almaws/v1/bibs/${mmsId}/holdings/${holdingId}?apikey=${process.env.ALMA_APIKEY}`, xml),
-    createItem: (mmsId, holdingId, xml) => createAlmaRecord(`/almaws/v1/bibs/${mmsId}/holdings/${holdingId}/items?apikey=${process.env.ALMA_APIKEY}`, xml),
-    createPoLine: (mmsId, xml) => createAlmaRecord(`/almaws/v1/acq/po-lines/?apikey=${process.env.ALMA_APIKEY}`, xml)
-};
 
 /** ------------------------ DB ------------------------ **/
 
-function saveFailedLibrisRecord(record, librisId, type) {
-  const query = `INSERT INTO libris_import_failed_records (libris_id, record_type, record) VALUES (?, ?, ?)`;
-  db.query(query, [librisId, type, record], (err) => {
+function saveFailedLibrisRecord(record, librisId, type, errorMessage) {
+  const query = `INSERT INTO libris_import_failed_records (libris_id, record_type, record, error_message) VALUES (?, ?, ?, ?)`;
+  db.query(query, [librisId, type, record, errorMessage], (err) => {
     if (err) logger.error('❌ Kunde inte spara misslyckad post i DB', err);
     else logger.info(`💾 Misslyckad post sparad i DB, librisId: ${librisId}`);
   });
@@ -575,11 +590,12 @@ async function processRecord(record) {
 
     const holdingsXml = buildHoldingsXml(extractDataFields(record, '852')[0]);
 
-    // Kör endast om holdings finns
-    if (!holdingsXml) return logger.info(`⚠ Holdings saknas i Libris: ${librisId}`);
-
     //Hämta librisId
     const librisId = getControlFieldValue(record, '001');
+
+    // Kör endast om holdings finns
+    if (!holdingsXml) return logger.info(`⚠ Holdings saknas i Libris: ${librisId}`);
+    
     //Hämta typ
     const controlFieldValue_type = getControlFieldValue(record, '008');
     logger.info(`📌 Type: ${controlFieldValue_type.substring(24,25)}`);
@@ -605,10 +621,10 @@ async function processRecord(record) {
             } else {
                 logger.info("❌ Bibliografisk post för THESIS finns inte i Alma, importera post!");
                 const createResult = await createAlmaRecords(record, holdingsXml, bibExistsInAlma, 'THESIS');
-                if (createResult) {
+                if (createResult.success) {
                     logger.info("✅ Thesis skapad i Alma");
                 } else {
-                    throw new Error("❌ Thesis kunde inte skapas i Alma");
+                    throw new Error("❌ Thesis kunde inte skapas i Alma" + createResult.error);
                 }
             }
         } catch (err) {
@@ -633,7 +649,7 @@ async function processRecord(record) {
                 // Ta bort katalogisatörens anmärkning 1 från //
                 // holdings i Libris(852x)                    //
                 ////////////////////////////////////////////////
-                if (createResult) {
+                if (createResult.success) {
                     // Hämta Libris token
                     const libristoken = await getLibrisToken();
                     if (!libristoken) {
@@ -674,7 +690,7 @@ async function processRecord(record) {
                     }
                     logger.info("✅ Bok skapad i Alma");
                 } else {
-                    throw new Error("❌ Bok kunde inte skapas i Alma");
+                    throw new Error("❌ Bok kunde inte skapas i Alma" + createResult.error);
                 }
             } catch (err) {
                 throw err;
@@ -692,6 +708,7 @@ const main = async (fromDate, toDate) => {
     try {
         const filePath = path.join(__dirname, "librisexport.properties");
         const response = await getLibrisUpdates(filePath, fromDate, toDate);
+        logger.debug(response);
        
         const result = await parseXml(response);
 
@@ -726,8 +743,9 @@ const main = async (fromDate, toDate) => {
                 logger.info(`✅ Post hanterad utan fel: ${librisId}`);
             } catch (err) {
                 // Om fel uppstår, spara posten för retry
+                logger.debug(JSON.stringify(record));
                 logger.error(`❌ Fel vid bearbetning av post ${librisId}: ${err.message}`);
-                saveFailedLibrisRecord(JSON.stringify(record), librisId, type);
+                saveFailedLibrisRecord(JSON.stringify(record), librisId, type, err.message);
             }
             logger.info("------------------------------------------------");
         }
