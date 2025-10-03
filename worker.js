@@ -6,24 +6,24 @@ const nodemailer = require("nodemailer");
 
 function ensureFailedLibrisRecordsTable() {
     const createTableQuery = `
-    CREATE TABLE IF NOT EXISTS libris_import_failed_records (
+    CREATE TABLE IF NOT EXISTS libris_import_records (
       id INT AUTO_INCREMENT PRIMARY KEY,
       libris_id VARCHAR(50),
       record_type VARCHAR(20),
       record LONGTEXT,
-      error_message TEXT,
+      message TEXT,
       attempts INT DEFAULT 0,
       last_attempt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       mail_sent TINYINT(1) DEFAULT 0,
-      status ENUM('failed','success','max_attempts') DEFAULT 'failed'
+      status ENUM('failed','success','max_attempts') DEFAULT 'success'
     )
   `;
 
     db.query(createTableQuery, (err, result) => {
         if (err) {
-            logger.error('❌ Kunde inte skapa libris_import_failed_records-tabellen', err);
+            logger.error('❌ Kunde inte skapa libris_import_records-tabellen', err);
         } else {
-            logger.info('✅ Tabell libris_import_failed_records är klar');
+            logger.info('✅ Tabell libris_import_records är klar');
         }
     });
 }
@@ -38,8 +38,7 @@ async function retryFailedLibrisRecords() {
     //Antal max försök per post(justerbart via env)
     const maxAttempts = parseInt(process.env.LIBRISIMPORT_FAIL_MAX_ATTEMPTS, 10) || 5;
 
-    db.query('SELECT * FROM libris_import_failed_records WHERE status="failed"', async (err, results) => {
-    //db.query('SELECT * FROM libris_import_failed_records', async (err, results) => {
+    db.query('SELECT * FROM libris_import_records WHERE status="failed"', async (err, results) => {
         if (err) return logger.error('❌ Fel vid hämtning av misslyckade poster', err);
 
         for (const row of results) {
@@ -69,7 +68,7 @@ async function retryFailedLibrisRecords() {
                             logger.info(`📧 Skickade mail för max attempts: ${librisId}`);
 
                             // Markera att mail har skickats
-                            db.query('UPDATE libris_import_failed_records SET mail_sent = 1, status = "max_attempts" WHERE id = ?', [row.id]);
+                            db.query('UPDATE libris_import_records SET mail_sent = 1, status = "max_attempts" WHERE id = ?', [row.id]);
                         } catch (mailErr) {
                             logger.error(`❌ Kunde inte skicka mail för ${librisId}: ${mailErr.message}`);
                         }
@@ -86,13 +85,13 @@ async function retryFailedLibrisRecords() {
                 await processRecord(recordObj);
 
                 db.query(
-                    'UPDATE libris_import_failed_records SET attempts = attempts + 1, last_attempt = NOW(), error_message = "", status = "success" WHERE id = ?',
+                    `UPDATE libris_import_records SET attempts = attempts + 1, last_attempt = NOW(), message = " Retry lyckades och markerad som hanterad, librisId: ${librisId}", status = "success" WHERE id = ?`,
                     [row.id]
                 );
                 logger.info(`✅ Retry lyckades och markerad som hanterad, librisId: ${librisId}`);
             } catch (err) {
                 db.query(
-                    'UPDATE libris_import_failed_records SET attempts = attempts + 1, last_attempt = NOW(), error_message = ? WHERE id = ?',
+                    'UPDATE libris_import_records SET attempts = attempts + 1, last_attempt = NOW(), message = ? WHERE id = ?',
                     [err.message, row.id]
                 );
                 logger.warn(`❌ Retry misslyckades, librisId: ${librisId}, fel: ${err.message}`);

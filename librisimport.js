@@ -575,11 +575,11 @@ async function createAlmaItem(mms_id, holdings_id, record) {
 
 /** ------------------------ DB ------------------------ **/
 
-function saveFailedLibrisRecord(record, librisId, type, errorMessage) {
-  const query = `INSERT INTO libris_import_failed_records (libris_id, record_type, record, error_message) VALUES (?, ?, ?, ?)`;
+function saveImportedLibrisRecord(record, librisId, type, errorMessage) {
+  const query = `INSERT INTO libris_import_records (libris_id, record_type, record, message) VALUES (?, ?, ?, ?)`;
   db.query(query, [librisId, type, record, errorMessage], (err) => {
-    if (err) logger.error('❌ Kunde inte spara misslyckad post i DB', err);
-    else logger.info(`💾 Misslyckad post sparad i DB, librisId: ${librisId}`);
+    if (err) logger.error('❌ Kunde inte spara post i DB', err);
+    else logger.info(`💾 Libris post sparad i DB, librisId: ${librisId}`);
   });
 }
 
@@ -741,11 +741,14 @@ const main = async (fromDate, toDate) => {
                 logger.info(`🔄 Bearbetar post: ${librisId} (Typ: ${type})`);
                 await processRecord(record);
                 logger.info(`✅ Post hanterad utan fel: ${librisId}`);
+                if (type !== 'UNKNOWN') {
+                    saveImportedLibrisRecord(JSON.stringify(record), librisId, type, `✅ Post hanterad utan fel: ${librisId}`);
+                }
             } catch (err) {
                 // Om fel uppstår, spara posten för retry
                 logger.debug(JSON.stringify(record));
                 logger.error(`❌ Fel vid bearbetning av post ${librisId}: ${err.message}`);
-                saveFailedLibrisRecord(JSON.stringify(record), librisId, type, err.message);
+                saveImportedLibrisRecord(JSON.stringify(record), librisId, type, err.message);
             }
             logger.info("------------------------------------------------");
         }
