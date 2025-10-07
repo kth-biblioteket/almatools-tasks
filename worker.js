@@ -21,7 +21,7 @@ function ensureFailedLibrisRecordsTable() {
 
     db.query(createTableQuery, (err, result) => {
         if (err) {
-            logger.error('❌ Kunde inte skapa libris_import_records-tabellen', err);
+            logger.error('❌ Kunde inte skapa libris_import_records-tabellen ' + err);
         } else {
             logger.info('✅ Tabell libris_import_records är klar');
         }
@@ -39,7 +39,7 @@ async function retryFailedLibrisRecords() {
     const maxAttempts = parseInt(process.env.LIBRISIMPORT_FAIL_MAX_ATTEMPTS, 10) || 5;
 
     db.query('SELECT * FROM libris_import_records WHERE status="failed"', async (err, results) => {
-        if (err) return logger.error('❌ Fel vid hämtning av misslyckade poster', err);
+        if (err) return logger.error('❌ Fel vid hämtning av misslyckade poster ' + err);
 
         for (const row of results) {
             const librisId = row.libris_id;
@@ -57,7 +57,6 @@ async function retryFailedLibrisRecords() {
                             subject: `🚨 LibrisImport Max Attempts uppnådd för ${librisId}`,
                             text: `Posten med LibrisId ${librisId} (typ: ${type}) har misslyckats ${attempts} gånger och kommer inte längre att bearbetas.\n\nRecord:\n${record}`
                         };
-                        logger.error("❌ Max attempts nådda:", mailOptions.text);
                         try {
                             const transporter = nodemailer.createTransport({
                                 port: 25,

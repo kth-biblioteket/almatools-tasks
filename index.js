@@ -792,7 +792,7 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 	async function updateLastUntilTime(time) {
 		try {
 			await fspromises.writeFile(LAST_UNTIL_FILE, time, "utf-8");
-			logger.info("Updated lastUntilTime to:", time);
+			logger.info("Updated lastUntilTime to: " + time);
 		} catch (error) {
 			console.error("Error saving lastUntilTime:", error);
 		}
@@ -830,9 +830,10 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 					subject: "🚨 LibrisImport Failed",
 					text: `An error occurred during the Libris import process:\n\n${result.message}\n\n${JSON.stringify(result.recordsArray)}`,
 				};
-				logger.error("❌", mailOptions.text);
+				
 
 				if(process.env.SEND_ERROR_MAIL === 'true') {
+					logger.error("❌ Skickar mail om fel: " + mailOptions.text);
 					await transporter.sendMail(mailOptions);
 				}
 				

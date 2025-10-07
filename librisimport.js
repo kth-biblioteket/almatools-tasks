@@ -578,7 +578,7 @@ async function createAlmaItem(mms_id, holdings_id, record) {
 function saveImportedLibrisRecord(record, librisId, type, errorMessage) {
   const query = `INSERT INTO libris_import_records (libris_id, record_type, record, message) VALUES (?, ?, ?, ?)`;
   db.query(query, [librisId, type, record, errorMessage], (err) => {
-    if (err) logger.error('❌ Kunde inte spara post i DB', err);
+    if (err) logger.error('❌ Kunde inte spara post i DB ' + err);
     else logger.info(`💾 Libris post sparad i DB, librisId: ${librisId}`);
   });
 }
@@ -713,7 +713,7 @@ const main = async (fromDate, toDate) => {
         const result = await parseXml(response);
 
         if (!result.collection.record) {
-            logger.info("ℹ️ Inga records hittades i XML-filen.", response);
+            logger.info("ℹ️ Inga records hittades i XML-filen.");
             return { status: "no_records" };
         }
 
