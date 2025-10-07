@@ -124,19 +124,19 @@ function getLibraryCode(value) {
 async function makeHttpRequest(options, body = null, timeoutMs = parseInt(process.env.HTTP_TIMEOUT_MS, 10) || 5000) {
     return new Promise((resolve, reject) => {
         const startTime = Date.now();
-        logger.debug(`➡️ Starting HTTP request to https://${options.hostname}${options.path}`);
+        logger.debug(`➡️ Startar HTTP request till https://${options.hostname}${options.path}`);
 
         const req = https.request(options, (res) => {
             let data = '';
 
-            logger.debug(`📡 Connected. Status code: ${res.statusCode}`);
+            logger.debug(`📡 Ansluten. Statuskod: ${res.statusCode}`);
             res.on('data', (chunk) => {
                 data += chunk;
             });
 
             res.on('end', () => {
                 const duration = Date.now() - startTime;
-                logger.debug(`✅ Request ended in ${duration}ms`);
+                logger.debug(`✅ Request avslutades inom ${duration}ms`);
                 if (res.statusCode === 200 || res.statusCode === 204) {
                     resolve({
                         headers: res.headers,
@@ -144,22 +144,22 @@ async function makeHttpRequest(options, body = null, timeoutMs = parseInt(proces
                     });
                     
                 } else {
-                    reject(`Error: Received status code ${res.statusCode}`);
+                    reject(`Fel: Mottog statuskod ${res.statusCode}`);
                 }
             });
         });
 
         req.on('socket', (socket) => {
             socket.on('lookup', (err, address, family, host) => {
-                logger.debug(`🔍 DNS lookup for ${host} -> ${address} (IPv${family})`);
+                logger.debug(`🔍 DNS lookup för ${host} -> ${address} (IPv${family})`);
             });
 
             socket.on('connect', () => {
-                logger.debug('🔌 TCP connection established');
+                logger.debug('🔌 TCP anslutning etablerad');
             });
 
             socket.on('secureConnect', () => {
-                logger.debug('🔒 TLS handshake completed');
+                logger.debug('🔒 TLS handskakning avlsutad');
             });
         });
 

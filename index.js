@@ -792,9 +792,9 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 	async function updateLastUntilTime(time) {
 		try {
 			await fspromises.writeFile(LAST_UNTIL_FILE, time, "utf-8");
-			logger.info("Updated lastUntilTime to: " + time);
+			logger.info("Uppdaterade lastUntilTime till: " + time);
 		} catch (error) {
-			console.error("Error saving lastUntilTime:", error);
+			console.error("Fel vid sparande av lastUntilTime:", error);
 		}
 	}
 
@@ -812,7 +812,7 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 			const lastUntilTime = await getLastUntilTime();
 			const nowTime = new Date().toISOString().split('.')[0];
 
-			logger.info(`Running librisimport from ${lastUntilTime} to ${nowTime}`);
+			logger.info(`Kör librisimport från ${lastUntilTime} till ${nowTime}`);
 
 			const result = await librisimport.main(lastUntilTime, nowTime);
 
@@ -827,8 +827,8 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 				const mailOptions = {
 					from: process.env.MAILFROM_ADDRESS,
 					to: process.env.MAIL_ERROR_TO_ADDRESS,
-					subject: "🚨 LibrisImport Failed",
-					text: `An error occurred during the Libris import process:\n\n${result.message}\n\n${JSON.stringify(result.recordsArray)}`,
+					subject: "🚨 LibrisImport misslyckades",
+					text: `Ett fle uppstad vid körning av Librisimporten: \n\n${result.message}\n\n${JSON.stringify(result.recordsArray)}`,
 				};
 				
 
@@ -846,7 +846,7 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 		} catch (error) {
 			console.error("Error in cron job:", error);
 		} finally {
-			logger.info(`Running librisimport finished`);
+			logger.info(`Körning av librisimport avslutad`);
 			isRunning = false;
 		}
 	});
