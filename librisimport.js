@@ -6,6 +6,7 @@ const path = require('path');
 const xml2js = require('xml2js');
 const logger = require('./logger');
 const { db } = require('./db');
+const { getConfig } = require('./config');
 
 /** ------------------------ Helpers / Utils ------------------------ **/
 
@@ -121,7 +122,7 @@ function getLibraryCode(value) {
 
 /** ------------------------ HTTP Requests ------------------------ **/
 
-async function makeHttpRequest(options, body = null, timeoutMs = parseInt(process.env.HTTP_TIMEOUT_MS, 10) || 5000) {
+async function makeHttpRequest(options, body = null, timeoutMs = process.env.HTTP_TIMEOUT_MS || 5000) {
     return new Promise((resolve, reject) => {
         const startTime = Date.now();
         logger.debug(`➡️ Startar HTTP request till https://${options.hostname}${options.path}`);
@@ -163,12 +164,12 @@ async function makeHttpRequest(options, body = null, timeoutMs = parseInt(proces
             });
         });
 
-        req.on('error', (error) => reject(`Error during request: ${error}`));
+        req.on('error', (error) => reject(`Fel under request: ${error}`));
 
         // 👇 timeout sätts här
-        req.setTimeout(timeoutMs, () => {
+        req.setTimeout(parseInt(timeoutMs, 10), () => {
             req.destroy(); // avbryt anslutningen
-            reject(`Error: Request timed out after ${timeoutMs}ms`);
+            reject(`Fel: Request timeout efter ${timeoutMs}ms`);
         });
 
         if (body) req.write(body);
@@ -193,11 +194,10 @@ async function getLibrisToken () {
     };
     
     try {
-        const response = await makeHttpRequest(options);
+        const response = await makeHttpRequest(options, null, process.env.LIBRIS_HTTP_TIMEOUT_MS || 20000);
         return response.body;
     } catch (err) {
-        console.error(err);
-        logger.error(`❌ getLibrisToken error: ${err}`);
+        logger.error(`❌ getLibrisToken fel: ${err}`);
         return false;
     }
 }
@@ -214,11 +214,10 @@ async function getLibrisRecord (id) {
     };
     
     try {
-        const response = await makeHttpRequest(options);
+        const response = await makeHttpRequest(options, null, process.env.LIBRIS_HTTP_TIMEOUT_MS || 20000);
         return response;
     } catch (err) {
-        console.error(err);
-        logger.error(`❌ getLibrisToken error: ${err}`);
+        logger.error(`❌ getLibrisToken fel: ${err}`);
         return false;
     }
 }
@@ -263,11 +262,10 @@ async function updateLibrisHolding (id, etag, token, librisbody) {
     });
 
     try {
-        const response = await makeHttpRequest(options, JSON.stringify(filtered));
+        const response = await makeHttpRequest(options, JSON.stringify(filtered), process.env.LIBRIS_HTTP_TIMEOUT_MS || 20000);
         return true;
     } catch (err) {
-        console.error(err);
-        logger.error(`❌ updateLibrisHolding error: ${err}`);
+        logger.error(`❌ updateLibrisHolding fel: ${err}`);
         return false;
     }
 }
@@ -292,8 +290,22 @@ async function getLibrisUpdates(filePath, fromDate, toDate) {
                 "Content-Length": data.length,
             },
         };
-        const response = await makeHttpRequest(options, data);
-        return response.body;
+        // 📌 Retrying until success
+        let attempt = 1;
+        const maxAttempts = parseInt(await getConfig('librisimport_getupdate_max_attempts', '5'), 10);
+        while (attempt <= maxAttempts) {
+            try {
+                logger.info(`🔁 Försök ${attempt}...`);
+                const result = await makeHttpRequest(options, data, process.env.LIBRIS_HTTP_TIMEOUT_MS || 20000);
+                logger.info("🎉 Success!");
+                return result.body;
+            } catch (err) {
+                logger.info(`❌ Misslyckades (försök ${attempt}): ${err}`);
+                attempt++;
+            }
+        }
+        //const response = await makeHttpRequest(options, data);
+        //return response.body;
     } catch (error) {
         logger.error(`❌ Misslyckades att hämta Librisuppdateringar: ${error}`);
         throw new Error(`Failed to get Libris updates: ${error}`);
@@ -403,10 +415,9 @@ async function createAlmaRecords(record, holdingsXml, bibExistsInAlma, type) {
         
         const polineXml = buildPolineXml(mmsId, importedbykth);
         const polineresult = await createAlmaPoLine(mmsId, polineXml);
-        const polineId = polineresult?.po_line?.number || false;
-        const holdingId = polineresult?.po_line?.locations?.location?.holdings?.holding?.id || false;
-
-        if (polineId) {
+        if (polineresult.success === true) {
+            const polineId = polineresult?.po_line?.number || false;
+            const holdingId = polineresult?.po_line?.locations?.location?.holdings?.holding?.id || false;
             logger.info(`✅ PO Line skapad i Alma: ${polineId}`);
             logger.info(polineXml);
             if (holdingId) {
@@ -420,13 +431,13 @@ async function createAlmaRecords(record, holdingsXml, bibExistsInAlma, type) {
                     return { success: true };
                 } else {
                     logger.error("❌ Holding i Alma kunde inte uppdateras.");
-                    return { success: false, error: result.error };
+                    return { success: false, error: resultUpdateAlmaHolding.error };
                 }
         
             }
         } else {
             logger.error("❌ PO Line kunde inte skapas.");
-            return { success: false, error: result.error };
+            return { success: false, error: polineresult.error };
         }
     }
 }
@@ -443,13 +454,11 @@ async function createAlmaRecord(path, record) {
     };
     
     try {
-        const response = await makeHttpRequest(options, record);
+        const response = await makeHttpRequest(options, record, process.env.ALMA_HTTP_TIMEOUT_MS || 10000);
         const parsed = await parseXml(response.body);
         return { success: true, parsed: parsed };
     } catch (err) {
-        console.error(err);
-        console.error(record);
-        logger.error(`❌ createAlmaRecord error: ${err} ${record}`);
+        logger.error(`❌ createAlmaRecord fel: ${err} ${record}`);
         return { success: false, error: `❌ createAlmaRecord error: ${err}` };
     }
 }
@@ -466,14 +475,12 @@ async function updateAlmaRecord(path, record) {
     };
     
     try {
-        const response = await makeHttpRequest(options, record);
+        const response = await makeHttpRequest(options, record, process.env.ALMA_HTTP_TIMEOUT_MS || 10000);
         const parsed = await parseXml(response.body);
         return { success: true, parsed: parsed.parsed };
     } catch (err) {
-        console.error(err);
-        console.error(record);
-        logger.error(`❌ updateAlmaRecord error: ${err} ${record}`);
-        return { success: false, error: `❌ createAlmaRecord error: ${err}` };
+        logger.error(`❌ updateAlmaRecord fel: ${err} ${record}`);
+        return { success: false, error: `❌ createAlmaRecord fel: ${err}` };
     }
 }
 
@@ -482,11 +489,11 @@ async function checkIfExistsAlma(controlFieldValue) {
     const path = `/view/sru/46KTH_INST?version=1.2&operation=searchRetrieve&recordSchema=marcxml&query=alma.other_system_number=="${controlFieldValue}"`;
 
     try {
-        const response = await makeHttpRequest({ hostname, path, method: "GET" });
+        const response = await makeHttpRequest({ hostname, path, method: "GET" }, null, process.env.ALMA_HTTP_TIMEOUT_MS || 10000);
         const result = await parseXml(response.body);
         return result.searchRetrieveResponse.numberOfRecords == 1 ? result.searchRetrieveResponse.records.record.recordIdentifier : false;
     } catch (err) {
-        console.error(err);
+        logger.error(err);
         return false;
     }
 }
@@ -503,14 +510,12 @@ async function createAlmaPoLine(mms_id, po_line_object) {
     };
     
     try {
-        const response = await makeHttpRequest(options, po_line_object);
+        const response = await makeHttpRequest(options, po_line_object, process.env.ALMA_HTTP_TIMEOUT_MS || 10000);
         const result = await parseXml(response.body);
-        return result || false;
+        return { success: true, po_line: result.po_line };
     } catch (err) {
-        console.error(err);
-        console.error(po_line_object);
-        logger.error(`❌ createAlmaPoline error: ${err} ${po_line_object}`);
-        return false;
+        logger.error(`❌ createAlmaPoline fel: ${err} ${po_line_object}`);
+        return { success: false, error: err };
     }
 }
 
@@ -575,9 +580,9 @@ async function createAlmaItem(mms_id, holdings_id, record) {
 
 /** ------------------------ DB ------------------------ **/
 
-function saveImportedLibrisRecord(record, librisId, type, errorMessage) {
-  const query = `INSERT INTO libris_import_records (libris_id, record_type, record, message) VALUES (?, ?, ?, ?)`;
-  db.query(query, [librisId, type, record, errorMessage], (err) => {
+function saveImportedLibrisRecord(record, librisId, type, errorMessage, status) {
+  const query = `INSERT INTO libris_import_records (libris_id, record_type, record, message, status) VALUES (?, ?, ?, ?, ?)`;
+  db.query(query, [librisId, type, record, errorMessage, status], (err) => {
     if (err) logger.error('❌ Kunde inte spara post i DB ' + err);
     else logger.info(`💾 Libris post sparad i DB, librisId: ${librisId}`);
   });
@@ -742,13 +747,13 @@ const main = async (fromDate, toDate) => {
                 await processRecord(record);
                 logger.info(`✅ Post hanterad utan fel: ${librisId}`);
                 if (type !== 'UNKNOWN') {
-                    saveImportedLibrisRecord(JSON.stringify(record), librisId, type, `✅ Post hanterad utan fel: ${librisId}`);
+                    saveImportedLibrisRecord(JSON.stringify(record), librisId, type, `✅ Post hanterad utan fel: ${librisId}`, 'success');
                 }
             } catch (err) {
                 // Om fel uppstår, spara posten för retry
                 logger.debug(JSON.stringify(record));
                 logger.error(`❌ Fel vid bearbetning av post ${librisId}: ${err.message}`);
-                saveImportedLibrisRecord(JSON.stringify(record), librisId, type, err.message);
+                saveImportedLibrisRecord(JSON.stringify(record), librisId, type, err.message, 'failed');
             }
             logger.info("------------------------------------------------");
         }

@@ -67,24 +67,28 @@ async function retryFailedLibrisRecords() {
                             logger.info(`📧 Skickade mail för max attempts: ${librisId}`);
 
                             // Markera att mail har skickats
-                            db.query('UPDATE libris_import_records SET mail_sent = 1, status = "max_attempts" WHERE id = ?', [row.id]);
+                            db.query('UPDATE libris_import_records SET mail_sent = 1 WHERE id = ?', [row.id]);
                         } catch (mailErr) {
                             logger.error(`❌ Kunde inte skicka mail för ${librisId}: ${mailErr.message}`);
                         }
                     }
                 }
 
+                // Markera att max_attempts har uppnåtts
+                logger.info(`⚠️ Max försök uppnådda för ${librisId}, markerar som max_attempts.`);
+                db.query('UPDATE libris_import_records SET status = "max_attempts" WHERE id = ?', [row.id]);
+
                 continue; // hoppa över fler försök
             }
 
             try {
                 const recordObj = JSON.parse(record);
-                console.log(`🔄 Försöker igen: ${librisId} (Typ: ${type}, Försök: ${attempts + 1})`);
+                logger.info(`🔄 Försöker igen: ${librisId} (Typ: ${type}, Försök: ${attempts + 1})`);
 
                 await processRecord(recordObj);
 
                 db.query(
-                    `UPDATE libris_import_records SET attempts = attempts + 1, last_attempt = NOW(), message = " Retry lyckades och markerad som hanterad, librisId: ${librisId}", status = "success" WHERE id = ?`,
+                    `UPDATE libris_import_records SET attempts = attempts + 1, last_attempt = NOW(), message = "✅ Retry lyckades och markerad som hanterad, librisId: ${librisId}", status = "success" WHERE id = ?`,
                     [row.id]
                 );
                 logger.info(`✅ Retry lyckades och markerad som hanterad, librisId: ${librisId}`);

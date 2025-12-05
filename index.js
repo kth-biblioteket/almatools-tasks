@@ -12,6 +12,7 @@ const ftp = require('basic-ftp');
 const archiver = require('archiver');
 var parseString = require('xml2js').parseString;
 const logger = require('./logger');
+const { getConfig } = require('./config');
 
 var appath = "./";
 
@@ -675,6 +676,38 @@ async function createnewbooksrecords(booktype) {
 
 }
 
+async function getErrorCount() {
+    return new Promise((resolve) => {
+        database.db.query(
+            "SELECT value FROM system_status WHERE `key` = 'librisimport_error_count' LIMIT 1",
+            (err, results) => {
+                if (err) {
+                    console.error("Fel vid hämtning av error count:", err);
+                    return resolve(0);
+                }
+                if (results.length === 0) return resolve(0);
+                const count = parseInt(results[0].value, 10) || 0;
+                resolve(count);
+            }
+        );
+    });
+}
+
+async function setErrorCount(count) {
+    return new Promise((resolve) => {
+        database.db.query(
+            `INSERT INTO system_status (\`key\`, \`value\`)
+             VALUES ('librisimport_error_count', ?)
+             ON DUPLICATE KEY UPDATE \`value\` = VALUES(\`value\`)`,
+            [String(count)],
+            (err) => {
+                if (err) console.error("Fel vid sparande av error count:", err);
+                resolve();
+            }
+        );
+    });
+}
+
 console.log(new Date().toLocaleString());
 console.log("Almatools-tasks started");
 
@@ -816,30 +849,48 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 
 			const result = await librisimport.main(lastUntilTime, nowTime);
 
-			if (result.status === "error") {
-				const transporter = nodemailer.createTransport({
-					port: 25,
-					host: process.env.SMTP_HOST,
-					tls: {
-						rejectUnauthorized: false,
-					}
-				});
-				const mailOptions = {
-					from: process.env.MAILFROM_ADDRESS,
-					to: process.env.MAIL_ERROR_TO_ADDRESS,
-					subject: "🚨 LibrisImport misslyckades",
-					text: `Ett fle uppstad vid körning av Librisimporten: \n\n${result.message}\n\n${JSON.stringify(result.recordsArray)}`,
-				};
-				
+			const maxErrors = parseInt(await getConfig('librisimport_max_errors', '5'), 10);
+        	const sendMail = (await getConfig('send_error_mail', 'true')) === 'true';
 
-				if(process.env.SEND_ERROR_MAIL === 'true') {
-					logger.error("❌ Skickar mail om fel: " + mailOptions.text);
-					await transporter.sendMail(mailOptions);
+			// Hantera mailutskick vid fel
+			// Skickar mail endast efter x antal fel i rad
+			if (result.status === "error") {
+				// Läs nuvarande felräkning
+				let errorCount = await getErrorCount();
+				errorCount++;
+				await setErrorCount(errorCount);
+
+				logger.warn(`⚠️ Librisimport misslyckades (${errorCount} försök i rad)`);
+
+				if (errorCount >= maxErrors) {
+					const transporter = nodemailer.createTransport({
+						port: 25,
+						host: process.env.SMTP_HOST,
+						tls: {
+							rejectUnauthorized: false,
+						}
+					});
+					const mailOptions = {
+						from: process.env.MAILFROM_ADDRESS,
+						to: process.env.MAIL_ERROR_TO_ADDRESS,
+						subject: "🚨 LibrisImport misslyckades",
+						text: `Ett fel uppstad vid körning av Librisimporten: \n\n${result.message}\n\n${JSON.stringify(result.recordsArray)}`,
+					};
+					
+
+					if(process.env.SEND_ERROR_MAIL === 'true') {
+						logger.error(`❌ Skickar mail efter ${errorCount} misslyckade försök: ${mailOptions.text}`);
+						await transporter.sendMail(mailOptions);
+					} else {
+						logger.info(`Mail är inaktiverat. Skickar inte mail efter ${errorCount} misslyckade försök.`);	
+					}
+					await setErrorCount(0);
 				}
 				
 
 			} else {
-				// Allt gick bra, uppdatera lastUntilTime
+				// Allt gick bra, uppdatera lastUntilTime, nollställ räknaren
+				await setErrorCount(0);
 				await updateLastUntilTime(nowTime);
 			}
 
