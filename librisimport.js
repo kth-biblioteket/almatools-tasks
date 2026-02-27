@@ -7,6 +7,7 @@ const xml2js = require('xml2js');
 const logger = require('./logger');
 const { db } = require('./db');
 const { getConfig } = require('./config');
+const { error } = require('console');
 
 /** ------------------------ Helpers / Utils ------------------------ **/
 
@@ -307,8 +308,7 @@ async function getLibrisUpdates(filePath, fromDate, toDate) {
         //const response = await makeHttpRequest(options, data);
         //return response.body;
     } catch (error) {
-        logger.error(`❌ Misslyckades att hämta Librisuppdateringar: ${error}`);
-        throw new Error(`Failed to get Libris updates: ${error}`);
+        throw new Error(`❌ Misslyckades att hämta Librisuppdateringar: ${error}`);
     }
 }
 
@@ -479,22 +479,45 @@ async function updateAlmaRecord(path, record) {
         const parsed = await parseXml(response.body);
         return { success: true, parsed: parsed.parsed };
     } catch (err) {
+        console.log(err)
         logger.error(`❌ updateAlmaRecord fel: ${err} ${record}`);
         return { success: false, error: `❌ createAlmaRecord fel: ${err}` };
     }
 }
 
-async function checkIfExistsAlma(controlFieldValue) {
+async function checkIfExistsAlma(other_system_number, type) {
     const hostname = process.env.ALMA_SRU_HOSTNAME;
-    const path = `/view/sru/46KTH_INST?version=1.2&operation=searchRetrieve&recordSchema=marcxml&query=alma.other_system_number=="${controlFieldValue}"`;
+    const path = `/view/sru/46KTH_INST?version=1.2&operation=searchRetrieve&recordSchema=marcxml&query=alma.other_system_number=="${other_system_number}"`;
 
     try {
         const response = await makeHttpRequest({ hostname, path, method: "GET" }, null, process.env.ALMA_HTTP_TIMEOUT_MS || 10000);
         const result = await parseXml(response.body);
-        return result.searchRetrieveResponse.numberOfRecords == 1 ? result.searchRetrieveResponse.records.record.recordIdentifier : false;
+
+        const srr = result.searchRetrieveResponse;
+        let exists = false;
+        let recordId = null;
+        let recordCount = 0;
+        if (type === 'THESIS' && Number(srr.numberOfRecords) >= 1) {
+            exists = true;
+        } else if (type === 'BOOK' && Number(srr.numberOfRecords) === 1) {
+            exists = true;
+            recordId = srr.records.record.recordIdentifier;
+        }
+        recordCount = Number(srr.numberOfRecords);
+
+        return {
+            success: true,
+            recordexists: exists,
+            recordCount: recordCount,
+            recordIdentifier: recordId,
+            error: null
+        }
     } catch (err) {
-        logger.error(err);
-        return false;
+        logger.error("Fel vid SRU-anrop:", err);
+        return {
+            success: false,
+            error: err
+        }
     }
 }
 
@@ -620,19 +643,25 @@ async function processRecord(record) {
         try {
             // Kör bara om record inte finns i Alma
             // Uppdateringar för thesis hanteras i senare version
-            const bibExistsInAlma = await checkIfExistsAlma(other_system_number);
-            if (bibExistsInAlma) {
-                logger.info(`✅ Bibliografisk post för THESIS finns i Alma: ${bibExistsInAlma}`);
-            } else {
-                logger.info("❌ Bibliografisk post för THESIS finns inte i Alma, importera post!");
-                const createResult = await createAlmaRecords(record, holdingsXml, bibExistsInAlma, 'THESIS');
-                if (createResult.success) {
-                    logger.info("✅ Thesis skapad i Alma");
-                } else {
-                    throw new Error("❌ Thesis kunde inte skapas i Alma" + createResult.error);
-                }
+            const bibCheck = await checkIfExistsAlma(other_system_number, 'THESIS');
+
+            if (!bibCheck.success) {
+                throw new Error(`❌  Fel vid kontroll av Alma-post: ${bibCheck.error}`);
             }
+
+            if (bibCheck.recordexists) {
+                logger.info(`✅ Bibliografisk THESIS-post finns redan i Alma : ${bibCheck.recordCount}), gör ingen import!`);
+            }
+
+            logger.info("✅ Bibliografisk post för THESIS finns inte i Alma, importera post!");
+            const createResult = await createAlmaRecords(record, holdingsXml, bibCheck.recordIdentifier, 'THESIS');
+            if (!createResult.success) {
+                throw new Error(`❌ Thesis kunde inte skapas i Alma: ${createResult.error}`); 
+            }
+            logger.info("✅ Thesis skapad i Alma");
+
         } catch (err) {
+            logger.error(`Fel i THESIS-importflödet: ${err.message}`);
             throw err;
         }
     } else {
@@ -643,12 +672,22 @@ async function processRecord(record) {
         const dataField852 = extractDataFields(record, "852");
         const codeX = dataField852[0].subfields.find((sub) => sub.code === "x");
         if (codeX?.value === "1") {
-            logger.info("❌ Bok markerad med 1 av katalogisatör, importera post");
+            logger.info("✅ Bok markerad med 1 av katalogisatör, importera post");
             try {
-                const bibExistsInAlma = await checkIfExistsAlma(other_system_number);
+
+                const bibCheck = await checkIfExistsAlma(other_system_number, 'BOOK');
+
+                if (bibCheck.recordCount > 1) {
+                    //Det här borde inte hända?
+                    logger.info(`❌ Det finns flera poster i Alma med samma other_system_number (${other_system_number}), därför kommer posten inte att importeras för att undvika dubbletter. BibCheck recordCount: ${bibCheck.recordCount}`);
+                }
+
+                if (!bibCheck.success) {
+                    throw new Error(`❌ Fel vid kontroll av Alma-post: ${bibCheck.error}`);
+                }
                 
-                logger.info(`❌ Importerar post! Exists: ${bibExistsInAlma}`);
-                const createResult = await createAlmaRecords(record, holdingsXml, bibExistsInAlma, 'BOOK');
+                logger.info(`✅ Importerar post! Exists: ${bibCheck.recordIdentifier}`);
+                const createResult = await createAlmaRecords(record, holdingsXml, bibCheck.recordIdentifier, 'BOOK');
                 //////////////////////////////////////////////// 
                 // Om posten skapats/uppdaterats i Alma       //
                 // Ta bort katalogisatörens anmärkning 1 från //

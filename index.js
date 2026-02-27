@@ -840,6 +840,13 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 			return;
 		}
 
+		const now = new Date();
+  		const hour = now.getHours();
+
+		if (hour >= 22 || hour < 6) {
+			return;
+		}
+
 		isRunning = true;
 		try {
 			const lastUntilTime = await getLastUntilTime();
@@ -874,7 +881,7 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 						from: process.env.MAILFROM_ADDRESS,
 						to: process.env.MAIL_ERROR_TO_ADDRESS,
 						subject: "🚨 LibrisImport misslyckades",
-						text: `Ett fel uppstad vid körning av Librisimporten: \n\n${result.message}\n\n${JSON.stringify(result.recordsArray)}`,
+						text: `Ett fel uppstod vid körning av Librisimporten: \n\n${result.message}\n\n${JSON.stringify(result.recordsArray)}`,
 					};
 					
 
