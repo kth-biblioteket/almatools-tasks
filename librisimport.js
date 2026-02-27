@@ -651,6 +651,7 @@ async function processRecord(record) {
 
             if (bibCheck.recordexists) {
                 logger.info(`✅ Bibliografisk THESIS-post finns redan i Alma : ${bibCheck.recordCount}), gör ingen import!`);
+                return;
             }
 
             logger.info("✅ Bibliografisk post för THESIS finns inte i Alma, importera post!");
