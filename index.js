@@ -843,10 +843,6 @@ if (process.env.CRON_LIBRISIMPORT_ACTIVE === 'true') {
 		const now = new Date();
   		const hour = now.getHours();
 
-		if (hour >= 22 || hour < 6) {
-			return;
-		}
-
 		isRunning = true;
 		try {
 			const lastUntilTime = await getLastUntilTime();
