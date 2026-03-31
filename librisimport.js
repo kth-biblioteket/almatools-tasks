@@ -105,7 +105,7 @@ function getLocationCode(value) {
         } else if (value === "Trita-diss.") {
             return `<subfield code="c">hbdok3</subfield>`;
         } else if (value === "Lic.") {
-            return `<subfield code="c">hblic3</subfield>`;
+            return `<subfield code="c">hblic2</subfield>`;
         } else {
             return `<subfield code="c">hbkla</subfield>`;
         }

@@ -13,6 +13,19 @@ services:
     networks:
       - "apps-net"
 
+  almatools-worker:
+    container_name: almatools-worker
+    image: ghcr.io/kth-biblioteket/almatools-tasks:${REPO_TYPE}
+    restart: "always"
+    environment:
+      TZ: ${TZ}
+    env_file:
+      - almatools-tasks.env
+    volumes:
+      - "./logs:/app/logs"
+    command: ["node", "worker.js"]
+    networks:
+      - apps-net
 networks:
   apps-net:
     external: true
